@@ -25,3 +25,4 @@ For jobs that must match legacy RGT BLUM probing behavior:
 - Release tag: `v2026.02.27-probing-fix`
 - Additional details: `DEV_NOTES.md` and `CHANGELOG.md`
 - Operator quick card: `OPERATOR_SETUP_CARD.md`
+- Printable checklist: `OPERATOR_CHECKLIST_PRINT.md`
