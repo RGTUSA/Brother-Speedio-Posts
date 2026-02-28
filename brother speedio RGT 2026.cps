@@ -1157,16 +1157,29 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "S" + xyzFormat.format(cycle.width1),
-        "X1",
-        "Z" + xyzFormat.format(z - cycle.depth),
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        "R" + xyzFormat.format(cycle.probeClearance),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "X1",
+          "I" + xyzFormat.format(x),
+          "Z" + xyzFormat.format(-cycle.depth),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "X1",
+          "Z" + xyzFormat.format(z - cycle.depth),
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-y-wall":
@@ -1181,16 +1194,29 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "S" + xyzFormat.format(cycle.width1),
-        "Z" + xyzFormat.format(z - cycle.depth),
-        "Y1",
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        "R" + xyzFormat.format(cycle.probeClearance),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "Z" + xyzFormat.format(-cycle.depth),
+          "Y1",
+          "J" + xyzFormat.format(y),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "Z" + xyzFormat.format(z - cycle.depth),
+          "Y1",
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-x-channel":
@@ -1204,14 +1230,25 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "S" + xyzFormat.format(cycle.width1),
-        "X1",
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "X1",
+          "I" + xyzFormat.format(x),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "X1",
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-x-channel-with-island":
@@ -1226,16 +1263,29 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "R" + xyzFormat.format(-cycle.probeClearance),
-        "S" + xyzFormat.format(cycle.width1),
-        "Z" + xyzFormat.format(z - cycle.depth),
-        "X1",
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "X1",
+          "I" + xyzFormat.format(x),
+          "R" + xyzFormat.format(-cycle.probeClearance),
+          "Z" + xyzFormat.format(-cycle.depth),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "R" + xyzFormat.format(-cycle.probeClearance),
+          "S" + xyzFormat.format(cycle.width1),
+          "Z" + xyzFormat.format(z - cycle.depth),
+          "X1",
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-y-channel":
@@ -1249,14 +1299,25 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "S" + xyzFormat.format(cycle.width1),
-        "Y1",
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "Y1",
+          "J" + xyzFormat.format(y),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "Y1",
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-y-channel-with-island":
@@ -1271,16 +1332,29 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "R" + xyzFormat.format(-cycle.probeClearance),
-        "S" + xyzFormat.format(cycle.width1),
-        "Z" + xyzFormat.format(z - cycle.depth),
-        "Y1",
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "Y1",
+          "J" + xyzFormat.format(y),
+          "R" + xyzFormat.format(-cycle.probeClearance),
+          "Z" + xyzFormat.format(-cycle.depth),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "R" + xyzFormat.format(-cycle.probeClearance),
+          "S" + xyzFormat.format(cycle.width1),
+          "Z" + xyzFormat.format(z - cycle.depth),
+          "Y1",
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-xy-circular-boss":
@@ -1295,15 +1369,28 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "S" + xyzFormat.format(cycle.width1),
-        "Z" + xyzFormat.format(z - cycle.depth),
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        "R" + xyzFormat.format(cycle.probeClearance),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "Z" + xyzFormat.format(-cycle.depth),
+          "I" + xyzFormat.format(x),
+          "J" + xyzFormat.format(y),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "Z" + xyzFormat.format(z - cycle.depth),
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-xy-circular-partial-boss":
@@ -1335,13 +1422,24 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "S" + xyzFormat.format(cycle.width1),
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "I" + xyzFormat.format(x),
+          "J" + xyzFormat.format(y),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-xy-circular-partial-hole":
@@ -1372,15 +1470,28 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "R" + xyzFormat.format(-cycle.probeClearance),
-        "S" + xyzFormat.format(cycle.width1),
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        "Z" + xyzFormat.format(z - cycle.depth),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "I" + xyzFormat.format(x),
+          "J" + xyzFormat.format(y),
+          "R" + xyzFormat.format(-cycle.probeClearance),
+          "Z" + xyzFormat.format(-cycle.depth),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "R" + xyzFormat.format(-cycle.probeClearance),
+          "S" + xyzFormat.format(cycle.width1),
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          "Z" + xyzFormat.format(z - cycle.depth),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-xy-circular-partial-hole-with-island":
@@ -1442,28 +1553,53 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      zOutput.reset();
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "S" + xyzFormat.format(cycle.width1),
-        "X1",
-        "Z" + xyzFormat.format(z - cycle.depth),
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        "R" + xyzFormat.format(cycle.probeClearance),
-        getProbingArguments(cycle, true)
-      );
-      zOutput.reset();
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        "S" + xyzFormat.format(cycle.width2),
-        "Y1",
-        "Z" + xyzFormat.format(z - cycle.depth),
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        "R" + xyzFormat.format(cycle.probeClearance),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        zOutput.reset();
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "X1",
+          "I" + xyzFormat.format(x),
+          "Z" + xyzFormat.format(-cycle.depth),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+        zOutput.reset();
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width2),
+          "Y1",
+          "J" + xyzFormat.format(y),
+          "Z" + xyzFormat.format(-cycle.depth),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        zOutput.reset();
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width1),
+          "X1",
+          "Z" + xyzFormat.format(z - cycle.depth),
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+        zOutput.reset();
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "S" + xyzFormat.format(cycle.width2),
+          "Y1",
+          "Z" + xyzFormat.format(z - cycle.depth),
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          "R" + xyzFormat.format(cycle.probeClearance),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-xy-rectangular-hole-with-island":
@@ -1540,14 +1676,26 @@ function writeProbeCycle(cycle, x, y, z) {
         getProbingArguments(cycle, true)
       );
     } else {
-      writeBlock(
-        gFormat.format(65), "P" + 8700,
-        conditional(useBlumA1(), "A1"),
-        xOutput.format(cornerX),
-        yOutput.format(cornerY),
-        "Q" + xyzFormat.format(cycle.probeOvertravel),
-        getProbingArguments(cycle, true)
-      );
+      if (useLegacyBlumMacros()) {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          "X" + xyzFormat.format(approach(cycle.approach1) * (cycle.probeClearance * 2 + tool.diameter / 2)),
+          "Y" + xyzFormat.format(approach(cycle.approach2) * (cycle.probeClearance * 2 + tool.diameter / 2)),
+          "I" + xyzFormat.format(x + approach(cycle.approach1) * (cycle.probeClearance + tool.diameter / 2)),
+          "J" + xyzFormat.format(y + approach(cycle.approach2) * (cycle.probeClearance + tool.diameter / 2)),
+          getProbingArguments(cycle, true)
+        );
+      } else {
+        writeBlock(
+          gFormat.format(65), "P" + 8700,
+          conditional(useBlumA1(), "A1"),
+          xOutput.format(cornerX),
+          yOutput.format(cornerY),
+          "Q" + xyzFormat.format(cycle.probeOvertravel),
+          getProbingArguments(cycle, true)
+        );
+      }
     }
     break;
   case "probing-x-plane-angle":
