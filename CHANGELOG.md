@@ -4,6 +4,9 @@ All notable changes to this post set are documented in this file.
 
 ## 2026-02-27
 
+### Release
+- Git tag: `v2026.02.27-probing-fix`
+
 ### Added
 - BLUM A1 output toggle property (`blumUseA1`) with default set to OFF.
 - Tool break macro property (`toolBreakControlMacro`) with default `8000`.

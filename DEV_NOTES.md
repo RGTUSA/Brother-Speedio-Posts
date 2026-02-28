@@ -2,6 +2,8 @@
 
 Date: 2026-02-27
 
+Release tag: `v2026.02.27-probing-fix`
+
 ## Post updates included
 - Added BLUM A1 output toggle property (`blumUseA1`) and set default to OFF.
 - Added tool break macro property (`toolBreakControlMacro`, default `8000`).
