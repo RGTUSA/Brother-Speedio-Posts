@@ -1031,6 +1031,7 @@ function writeDrillCycle(cycle, x, y, z) {
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
+          sOutput.format(spindleSpeed),
           getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
         );
       } else {
@@ -1038,6 +1039,7 @@ function writeDrillCycle(cycle, x, y, z) {
           gRetractModal.format(98), gCycleModal.format((tool.type == TOOL_TAP_LEFT_HAND) ? 74 : 84),
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           "P" + secFormat.format(P),
+          sOutput.format(spindleSpeed),
           cyclefeedOutput.format(F)
         );
       }
@@ -1052,6 +1054,7 @@ function writeDrillCycle(cycle, x, y, z) {
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
+          sOutput.format(spindleSpeed),
           getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
         );
       } else {
@@ -1059,6 +1062,7 @@ function writeDrillCycle(cycle, x, y, z) {
           gRetractModal.format(98), gCycleModal.format(74),
           getCommonCycle(x, y, z, cycle.retract),
           "P" + secFormat.format(P),
+          sOutput.format(spindleSpeed),
           cyclefeedOutput.format(F)
         );
       }
@@ -1073,6 +1077,7 @@ function writeDrillCycle(cycle, x, y, z) {
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
+          sOutput.format(spindleSpeed),
           getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
         );
       } else {
@@ -1080,6 +1085,7 @@ function writeDrillCycle(cycle, x, y, z) {
           gRetractModal.format(98), gCycleModal.format(84),
           getCommonCycle(x, y, z, cycle.retract),
           "P" + secFormat.format(P),
+          sOutput.format(spindleSpeed),
           cyclefeedOutput.format(F)
         );
       }
@@ -1100,6 +1106,7 @@ function writeDrillCycle(cycle, x, y, z) {
             "Q" + xyzFormat.format(cycle.incrementalDepth),
             unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
             unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
+            sOutput.format(spindleSpeed),
             getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
           );
         } else { // G84/G74 does not support chip breaking
@@ -3399,7 +3406,7 @@ function writeToolCall(tool, insertToolCall) {
 // <<<<< INCLUDED FROM include_files/writeToolCall.cpi
 // >>>>> INCLUDED FROM include_files/startSpindle.cpi
 function startSpindle(tool, insertToolCall) {
-  if (tool.type != TOOL_PROBE) {
+  if (!noSpindle()) {
     var spindleSpeedIsRequired = insertToolCall || forceSpindleSpeed || isFirstSection() ||
       rpmFormat.areDifferent(spindleSpeed, sOutput.getCurrent()) ||
       (tool.clockwise != getPreviousSection().getTool().clockwise);
