@@ -1574,7 +1574,7 @@ function getProbingArguments(cycle, updateWCS) {
       ((cycle.updateToolWear && cycleType !== "probing-z") ? "T" + xyzFormat.format(cycle.toolDiameterOffset) : undefined),
       (cycle.updateToolWear ? "V" + xyzFormat.format(cycle.toolWearUpdateThreshold ? cycle.toolWearUpdateThreshold : 0) : undefined),
       (cycle.printResults ? "W" + xyzFormat.format(1 + cycle.incrementComponent) : undefined), // 1 for advance feature, 2 for reset feature count and advance component number. first reported result in a program should use W2.
-      conditional(outputWCSCode, "S" + probeWCSFormat.format(probeOutputWorkOffset > 6 ? (probeOutputWorkOffset - 6 + 100) : probeOutputWorkOffset))
+      conditional(outputWCSCode, "S" + probeWCSFormat.format(probeOutputWorkOffset > 6 ? (probeOutputWorkOffset - 6 + 100) : (probeOutputWorkOffset + 53)))
     ];
   } else {
     return [
@@ -1708,9 +1708,15 @@ function onCommand(command) {
     return;
   case COMMAND_BREAK_CONTROL:
     onCommand(COMMAND_COOLANT_OFF);
+    writeRetract(Z); // outputs G28 G91 Z0 + G90 with current retract settings
+    disableLengthCompensation(true); // force G49 output
+    cancelWorkPlane(true); // force G69 output
+    smoothing.force = true;
+    setSmoothing(false); // force smoothing-off code (M289 in mode B)
     writeComment("PERFORMING TOOL BREAK DETECTION");
     onCommand(COMMAND_STOP_SPINDLE);
     writeBlock(mFormat.format(98), "P8000");
+    onCommand(COMMAND_STOP_SPINDLE); // enforce M05 directly after break-check macro call
     return;
   case COMMAND_TOOL_MEASURE:
     return;
