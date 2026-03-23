@@ -523,22 +523,16 @@ function setSmoothing(mode) {
     validate(!state.lengthCompensationActive, "Length compensation is active while trying to update smoothing.");
   }
 
-  // for smoothingModes A and B mapping is required for smoothing level value
-  var propertyBaseLevel = parseInt(getProperty("useSmoothing"), 10);
-  propertyBaseLevel = isNaN(propertyBaseLevel) ? -1 : propertyBaseLevel;
-  var mappedLevel = (propertyBaseLevel >= 0 && propertyBaseLevel <= 5) ? [0, 5, 3, 4, 1, 2][propertyBaseLevel] : smoothing.level;
-  switch (getProperty("smoothingMode")) {
-  case "A":
-    writeBlock(mFormat.format(mode ? 260 + mappedLevel : 269));
-    break;
-  case "B":
-    writeBlock(mFormat.format(mode ? 280 + mappedLevel : 289));
-    break;
-  default:
-    writeBlock(mFormat.format(298), mode ? "L" + smoothing.level : "L0");
-    break;
+  var commandMode = smoothing.commandMode;
+  if (mode && smoothing.isActive && smoothing.activeMode != commandMode) {
+    outputSmoothingCommand(false, smoothing.activeMode, smoothing.level);
+    smoothing.isActive = false;
+    smoothing.activeMode = undefined;
   }
+
+  outputSmoothingCommand(mode, (!mode && commandMode == "off") ? commandMode : (mode ? commandMode : (smoothing.activeMode || commandMode)), smoothing.level);
   smoothing.isActive = mode;
+  smoothing.activeMode = mode ? commandMode : undefined;
   smoothing.force = false;
   smoothing.isDifferent = false;
 }
@@ -556,7 +550,16 @@ function onSection() {
     Vector.diff(defineWorkPlane(getPreviousSection(), false), defineWorkPlane(currentSection, false)).length > 1e-4);
   initializeSmoothing(); // initialize smoothing mode
 
-  if (insertToolCall || newWorkOffset || newWorkPlane || smoothing.cancel || state.tcpIsActive || currentSection.isMultiAxis()) {
+  // Check if current section needs TCP (for same-tool transitions from non-TCP)
+  var currentSectionNeedsTCP = isTCPSupportedByOperation(currentSection) && !isToolChangeNeeded();
+  var sameToolTCPEntry = currentSectionNeedsTCP && !insertToolCall;
+
+  if (sameToolTCPEntry) {
+    forceSpindleSpeed = true;
+    forceCoolant = true;
+  }
+
+  if (insertToolCall || newWorkOffset || newWorkPlane || smoothing.cancel || state.tcpIsActive || currentSection.isMultiAxis() || currentSectionNeedsTCP) {
     if (insertToolCall && !isFirstSection()) {
       onCommand(COMMAND_COOLANT_OFF); // turn off coolant before retract during tool change
       onCommand(COMMAND_STOP_SPINDLE); // stop spindle before retract during tool change
@@ -570,8 +573,8 @@ function onSection() {
       }
       forceABC();
     } else {
-      if (insertToolCall || newWorkPlane) {
-        cancelWorkPlane();
+      if (insertToolCall || newWorkPlane || currentSectionNeedsTCP) {
+        cancelWorkPlane(currentSectionNeedsTCP); // force G69 output for TCP transitions
       }
       if (insertToolCall || smoothing.cancel) {
         setSmoothing(false);
@@ -607,7 +610,9 @@ function onSection() {
     formatWords(gPlaneModal.format(17), gAbsIncModal.format(90), gFeedModeModal.format(94)); // re-apply modal format
   } else {
     defineWorkPlane(currentSection, true);
-    startSpindle(tool, insertToolCall);
+    if (!sameToolTCPEntry) {
+      startSpindle(tool, insertToolCall);
+    }
   }
   // write parametric feedrate table
   if (typeof initializeParametricFeeds == "function") {
@@ -621,15 +626,17 @@ function onSection() {
 
   setProbeAngle(); // output probe angle rotations if required
 
-  setCoolant(tool.coolant); // writes the required coolant codes
-  // add dwell for through coolant if needed
-  if (tool.coolant == COOLANT_THROUGH_TOOL || tool.coolant == COOLANT_AIR_THROUGH_TOOL || tool.coolant == COOLANT_FLOOD_THROUGH_TOOL) {
-    if (isFirstSection()) {
-      onDwell(1);
-    } else {
-      var lastCoolant = getPreviousSection().getTool().coolant;
-      if (!(lastCoolant == COOLANT_THROUGH_TOOL || lastCoolant == COOLANT_AIR_THROUGH_TOOL || lastCoolant == COOLANT_FLOOD_THROUGH_TOOL)) {
+  if (!sameToolTCPEntry) {
+    setCoolant(tool.coolant); // writes the required coolant codes
+    // add dwell for through coolant if needed
+    if (tool.coolant == COOLANT_THROUGH_TOOL || tool.coolant == COOLANT_AIR_THROUGH_TOOL || tool.coolant == COOLANT_FLOOD_THROUGH_TOOL) {
+      if (isFirstSection()) {
         onDwell(1);
+      } else {
+        var lastCoolant = getPreviousSection().getTool().coolant;
+        if (!(lastCoolant == COOLANT_THROUGH_TOOL || lastCoolant == COOLANT_AIR_THROUGH_TOOL || lastCoolant == COOLANT_FLOOD_THROUGH_TOOL)) {
+          onDwell(1);
+        }
       }
     }
   }
@@ -644,8 +651,15 @@ function onSection() {
   var initialPosition = getFramePosition(currentSection.getInitialPosition());
   if (!insertToolCall) { // G100 tool call macro does handle initial positioning
     var isRequired = state.retractedZ || !state.lengthCompensationActive || (!isFirstSection() && getPreviousSection().isMultiAxis());
+    var sameToolNonTCPtoTCP = !isFirstSection() && !isToolChangeNeeded() && isTCPSupportedByOperation(currentSection) && !state.tcpIsActive;
     if (currentSection.isMultiAxis() || (currentSection.isOptimizedForMachine() && isTCPSupportedByOperation(currentSection))) {
       onCommand(COMMAND_LOAD_TOOL);
+      if (sameToolNonTCPtoTCP) {
+        startSpindle(tool, insertToolCall);
+        pendingTCPCoolant = true; // coolant will be output just before G69 in writeInitialPositioning
+        writeInitialPositioning(initialPosition, isRequired);
+        pendingTCPCoolant = false; // clear in case it wasn't consumed
+      }
       forceAny();
     } else {
       writeInitialPositioning(initialPosition, isRequired);
@@ -1637,24 +1651,32 @@ function onCommand(command) {
     var abc = settings.workPlaneMethod.useTiltedWorkplane ? undefined : defineWorkPlane(currentSection, false);
     var start = getFramePosition(currentSection.getInitialPosition());
     var preloadTool = getNextTool(tool.number != getFirstTool().number);
-    writeToolBlock(gFormat.format(100),
-      "T" + toolFormat.format(tool.number),
-      xOutput.format(start.x),
-      yOutput.format(start.y),
-      getOffsetCode(),
-      zOutput.format(start.z),
-      abc ? aOutput.format(abc.x) : undefined,
-      abc ? bOutput.format(abc.y) : undefined,
-      abc ? cOutput.format(abc.z) : undefined,
-      (getProperty("preloadTool") && preloadTool) ? "L" + toolFormat.format(preloadTool.number) : undefined,
-      hFormat.format(tool.lengthOffset),
-      tool.type != TOOL_PROBE ? diameterOffsetFormat.format(tool.diameterOffset) : "",
-      tool.type != TOOL_PROBE ? sOutput.format(spindleSpeed) : "",
-      tool.type != TOOL_PROBE ? mFormat.format(tool.clockwise ? 3 : 4) : ""
-    );
+    // For same-tool non-TCP to TCP transitions, output bare G100 only (no coordinates/offset code)
+    var isSameToolNonTCPtoTCP = tcp.isSupportedByOperation && !state.tcpIsActive && 
+      !isFirstSection() && !isToolChangeNeeded() && isTCPSupportedByOperation(currentSection);
+    
+    if (isSameToolNonTCPtoTCP) {
+      writeBlock(gFormat.format(100), "T" + toolFormat.format(tool.number));
+    } else {
+      writeToolBlock(gFormat.format(100),
+        "T" + toolFormat.format(tool.number),
+        xOutput.format(start.x),
+        yOutput.format(start.y),
+        getOffsetCode(),
+        zOutput.format(start.z),
+        abc ? aOutput.format(abc.x) : undefined,
+        abc ? bOutput.format(abc.y) : undefined,
+        abc ? cOutput.format(abc.z) : undefined,
+        (getProperty("preloadTool") && preloadTool) ? "L" + toolFormat.format(preloadTool.number) : undefined,
+        hFormat.format(tool.lengthOffset),
+        tool.type != TOOL_PROBE ? diameterOffsetFormat.format(tool.diameterOffset) : "",
+        tool.type != TOOL_PROBE ? sOutput.format(spindleSpeed) : "",
+        tool.type != TOOL_PROBE ? mFormat.format(tool.clockwise ? 3 : 4) : ""
+      );
+    }
     writeComment(tool.comment);
     currentWorkPlaneABC = abc ? abc : currentWorkPlaneABC; // workplane is set with the G100 command
-    forceSpindleSpeed = false;
+    forceSpindleSpeed = isSameToolNonTCPtoTCP;
 
     // for machine simulation, with TCP enabled G100 acts like prepositionWithTWP
     if (abc != undefined) {
@@ -1744,6 +1766,12 @@ function onSectionEnd() {
   }
   writeBlock(gPlaneModal.format(17));
 
+  // Output G43 before retract when transitioning from non-TCP to TCP on same tool to prevent SM4124 alarm
+  if (!isLastSection() && !state.tcpIsActive && isTCPSupportedByOperation(getNextSection()) && 
+      !isToolChangeNeeded(getNextSection(), getProperty("toolAsName") ? "description" : "number")) {
+    writeBlock(toolLengthCompOutput.format(43)); // standard comp before retract
+  }
+
   if (tool.type != TOOL_PROBE && getProperty("washdownCoolant") == "operationEnd") {
     writeBlock(washdownModal.format(washdownCoolant.on));
     writeBlock(washdownModal.format(washdownCoolant.off));
@@ -1790,6 +1818,12 @@ function writeRetract() {
     }
     if (retract.retractAxes[2] && state.tcpIsActive) {
       writeBlock(gFormat.format(100), "T" + toolFormat.format(currentToolNumber));
+      var currentSectionNeedsSameToolRestart = (typeof currentSection != "undefined") && !isFirstSection() &&
+        !isToolChangeNeeded(getProperty("toolAsName") ? "description" : "number");
+      if (currentSectionNeedsSameToolRestart) {
+        forceSpindleSpeed = true;
+        forceCoolant = true;
+      }
       machineSimulation({mode:RETRACTTOOLAXIS});
       return;
     }
@@ -2872,6 +2906,7 @@ var currentCoolantMode = COOLANT_OFF;
 var coolantOff = undefined;
 var isOptionalCoolant = false;
 var forceCoolant = false;
+var pendingTCPCoolant = false; // deferred coolant for same-tool non-TCP to TCP transitions
 
 function setCoolant(coolant) {
   var coolantCodes = getCoolantCodes(coolant);
@@ -2985,13 +3020,38 @@ var smoothing = {
   isDifferent: false, // tells if smoothing levels/tolerances/both are different between operations
   level      : -1, // the active level of smoothing
   tolerance  : -1, // the current operation tolerance
-  force      : false // smoothing needs to be forced out in this operation
+  force      : false, // smoothing needs to be forced out in this operation
+  commandMode: undefined, // smoothing command family for the current section
+  activeMode : undefined // smoothing command family currently active on the control
 };
+
+function isSimultaneousTCPSection(_section) {
+  return !!_section && _section.isMultiAxis() && isTCPSupportedByOperation(_section);
+}
+
+function outputSmoothingCommand(mode, commandMode, level) {
+  var mappedLevel = (level >= 0 && level <= 5) ? [0, 5, 3, 4, 1, 2][level] : level;
+  switch (commandMode) {
+  case "A":
+    writeBlock(mFormat.format(mode ? 260 + mappedLevel : 269));
+    break;
+  case "B":
+    writeBlock(mFormat.format(mode ? 280 + mappedLevel : 289));
+    break;
+  case "off":
+    writeBlock(mFormat.format(299));
+    break;
+  default:
+    writeBlock(mFormat.format(298), mode ? "L" + level : "L0");
+    break;
+  }
+}
 
 function initializeSmoothing() {
   var smoothingSettings = settings.smoothing;
   var previousLevel = smoothing.level;
   var previousTolerance = xyzFormat.getResultingValue(smoothing.tolerance);
+  var previousCommandMode = smoothing.commandMode;
 
   // format threshold parameters
   var thresholdRoughing = xyzFormat.getResultingValue(smoothingSettings.thresholdRoughing);
@@ -2999,9 +3059,14 @@ function initializeSmoothing() {
   var thresholdFinishing = xyzFormat.getResultingValue(smoothingSettings.thresholdFinishing);
 
   // determine new smoothing levels and tolerances
+  smoothing.commandMode = isSimultaneousTCPSection(currentSection) ? "off" : getProperty("smoothingMode");
   smoothing.level = parseInt(getProperty("useSmoothing"), 10);
   smoothing.level = isNaN(smoothing.level) ? -1 : smoothing.level;
   smoothing.tolerance = xyzFormat.getResultingValue(Math.max(getParameter("operation:tolerance", thresholdFinishing), 0));
+
+  if (smoothing.commandMode == "off") {
+    smoothing.level = -1;
+  }
 
   if (smoothing.level == 9999) {
     if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
@@ -3047,13 +3112,13 @@ function initializeSmoothing() {
 
   switch (smoothingSettings.differenceCriteria) {
   case "level":
-    smoothing.isDifferent = smoothing.level != previousLevel;
+    smoothing.isDifferent = smoothing.level != previousLevel || smoothing.commandMode != previousCommandMode;
     break;
   case "tolerance":
-    smoothing.isDifferent = smoothing.tolerance != previousTolerance;
+    smoothing.isDifferent = smoothing.tolerance != previousTolerance || smoothing.commandMode != previousCommandMode;
     break;
   case "both":
-    smoothing.isDifferent = smoothing.level != previousLevel || smoothing.tolerance != previousTolerance;
+    smoothing.isDifferent = smoothing.level != previousLevel || smoothing.tolerance != previousTolerance || smoothing.commandMode != previousCommandMode;
     break;
   default:
     error(localize("Unsupported smoothing criteria."));
@@ -3500,9 +3565,10 @@ function writeInitialPositioning(position, isRequired, codes1, codes2) {
         setWorkPlane(angles);
         writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(prePosition.x), yOutput.format(prePosition.y), feed, additionalCodes[0]);
         machineSimulation({x:prePosition.x, y:prePosition.y});
+        if (pendingTCPCoolant) { setCoolant(tool.coolant); pendingTCPCoolant = false; } // emit coolant just before G69
         cancelWorkPlane();
-        writeBlock(getOffsetCode(), hOffset, additionalCodes[1]); // omit Z-axis output is desired
-        forceAny(); // required to output XYZ coordinates in the following line
+        writeBlock(modalCodes, gMotionModal.format(motionCode.single), getOffsetCode(), xOutput.format(position.x), yOutput.format(position.y), zOutput.format(position.z), hOffset, additionalCodes[1]);
+        machineSimulation({x:position.x, y:position.y, z:position.z});
       } else {
         writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(position.x), yOutput.format(position.y), feed, additionalCodes[0]);
         machineSimulation({x:position.x, y:position.y});
