@@ -3066,7 +3066,7 @@ function initializeSmoothing() {
   var thresholdFinishing = xyzFormat.getResultingValue(smoothingSettings.thresholdFinishing);
 
   // determine new smoothing levels and tolerances
-  smoothing.commandMode = isSimultaneousTCPSection(currentSection) ? "off" : getProperty("smoothingMode");
+  smoothing.commandMode = isTCPSupportedByOperation(currentSection) ? "off" : getProperty("smoothingMode");
   smoothing.level = parseInt(getProperty("useSmoothing"), 10);
   smoothing.level = isNaN(smoothing.level) ? -1 : smoothing.level;
   smoothing.tolerance = xyzFormat.getResultingValue(Math.max(getParameter("operation:tolerance", thresholdFinishing), 0));
