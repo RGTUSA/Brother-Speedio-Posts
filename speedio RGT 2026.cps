@@ -1109,25 +1109,21 @@ function writeDrillCycle(cycle, x, y, z) {
     case "tapping-with-chip-breaking":
     case "left-tapping-with-chip-breaking":
     case "right-tapping-with-chip-breaking":
-      if (cycle.accumulatedDepth < cycle.depth) {
-        error(localize("Accumulated pecking depth is not supported for tapping cycles with chip breaking."));
-      } else {
-        if (!F) {
-          F = tool.getTappingFeedrate();
-        }
-        if (getProperty("usePitchForTapping")) {
-          writeBlock(
-            gRetractModal.format(98), gCycleModal.format((tool.type == TOOL_TAP_LEFT_HAND) ? 78 : 77),
-            getCommonCycle(x, y, cycle.bottom, cycle.retract),
-            "Q" + xyzFormat.format(cycle.incrementalDepth),
-            unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
-            unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-            sOutput.format(spindleSpeed),
-            getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
-          );
-        } else { // G84/G74 does not support chip breaking
-          error(localize("Tapping with chip breaking is not supported by the G74/G84 cycle."));
-        }
+      if (!F) {
+        F = tool.getTappingFeedrate();
+      }
+      if (getProperty("usePitchForTapping")) {
+        writeBlock(
+          gRetractModal.format(98), gCycleModal.format((tool.type == TOOL_TAP_LEFT_HAND) ? 278 : 277),
+          getCommonCycle(x, y, cycle.bottom, cycle.retract),
+          "Q" + xyzFormat.format(cycle.incrementalDepth),
+          unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
+          unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
+          sOutput.format(spindleSpeed),
+          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
+        );
+      } else { // G84/G74 does not support chip breaking
+        error(localize("Tapping with chip breaking is not supported by the G74/G84 cycle."));
       }
       break;
     case "fine-boring":

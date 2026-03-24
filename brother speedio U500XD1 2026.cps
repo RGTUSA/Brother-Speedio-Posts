@@ -544,15 +544,18 @@ function printProbeResults() {
 function onSection() {
   var forceSectionRestart = optionalSection && !currentSection.isOptional();
   optionalSection = currentSection.isOptional();
-  var insertToolCall = isToolChangeNeeded("number") || forceSectionRestart;
+  var toolChange = isToolChangeNeeded("number");
+  var insertToolCall = toolChange || forceSectionRestart;
   var newWorkOffset = isNewWorkOffset() || forceSectionRestart;
   var newWorkPlane = isNewWorkPlane() || forceSectionRestart || (typeof defineWorkPlane == "function" &&
     Vector.diff(defineWorkPlane(getPreviousSection(), false), defineWorkPlane(currentSection, false)).length > 1e-4);
   initializeSmoothing(); // initialize smoothing mode
 
   // Check if current section needs TCP (for same-tool transitions from non-TCP)
-  var currentSectionNeedsTCP = isTCPSupportedByOperation(currentSection) && !isToolChangeNeeded();
+  var currentSectionNeedsTCP = isTCPSupportedByOperation(currentSection) && !toolChange;
   var sameToolTCPEntry = currentSectionNeedsTCP && !insertToolCall;
+  var toolChangeTCPEntry = toolChange && isTCPSupportedByOperation(currentSection) &&
+    (currentSection.isMultiAxis() || currentSection.isOptimizedForMachine());
 
   if (sameToolTCPEntry) {
     forceSpindleSpeed = true;
@@ -607,6 +610,9 @@ function onSection() {
     // G100 tool call macro does handle retract, initial positioning XYZABC and starts the spindle
     state.retractedZ = true;
     writeToolCall(tool, insertToolCall);
+    if (toolChangeTCPEntry) {
+      startSpindle(tool, insertToolCall);
+    }
     formatWords(gPlaneModal.format(17), gAbsIncModal.format(90), gFeedModeModal.format(94)); // re-apply modal format
   } else {
     defineWorkPlane(currentSection, true);
@@ -649,10 +655,13 @@ function onSection() {
 
   // prepositioning
   var initialPosition = getFramePosition(currentSection.getInitialPosition());
-  if (!insertToolCall) { // G100 tool call macro does handle initial positioning
+  if (!insertToolCall || toolChangeTCPEntry) { // tool-change TCP entries use standard initial positioning to force G43.4 output
     var isRequired = state.retractedZ || !state.lengthCompensationActive || (!isFirstSection() && getPreviousSection().isMultiAxis());
     var sameToolNonTCPtoTCP = !isFirstSection() && !isToolChangeNeeded() && isTCPSupportedByOperation(currentSection) && !state.tcpIsActive;
-    if (currentSection.isMultiAxis() || (currentSection.isOptimizedForMachine() && isTCPSupportedByOperation(currentSection))) {
+    if (toolChangeTCPEntry) {
+      writeInitialPositioning(initialPosition, true);
+      forceAny();
+    } else if (currentSection.isMultiAxis() || (currentSection.isOptimizedForMachine() && isTCPSupportedByOperation(currentSection))) {
       onCommand(COMMAND_LOAD_TOOL);
       if (sameToolNonTCPtoTCP) {
         startSpindle(tool, insertToolCall);
@@ -901,24 +910,20 @@ function writeDrillCycle(cycle, x, y, z) {
     case "tapping-with-chip-breaking":
     case "left-tapping-with-chip-breaking":
     case "right-tapping-with-chip-breaking":
-      if (cycle.accumulatedDepth < cycle.depth) {
-        error(localize("Accumulated pecking depth is not supported for tapping cycles with chip breaking."));
-      } else {
-        if (!F) {
-          F = tool.getTappingFeedrate();
-        }
-        if (getProperty("usePitchForTapping")) {
-          writeBlock(
-            gRetractModal.format(98), gCycleModal.format((tool.type == TOOL_TAP_LEFT_HAND) ? 78 : 77),
-            getCommonCycle(x, y, cycle.bottom, cycle.retract),
-            "Q" + xyzFormat.format(cycle.incrementalDepth),
-            unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
-            unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-            getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
-          );
-        } else { // G84/G74 does not support chip breaking
-          error(localize("Tapping with chip breaking is not supported by the G74/G84 cycle."));
-        }
+      if (!F) {
+        F = tool.getTappingFeedrate();
+      }
+      if (getProperty("usePitchForTapping")) {
+        writeBlock(
+          gRetractModal.format(98), gCycleModal.format((tool.type == TOOL_TAP_LEFT_HAND) ? 278 : 277),
+          getCommonCycle(x, y, cycle.bottom, cycle.retract),
+          "Q" + xyzFormat.format(cycle.incrementalDepth),
+          unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
+          unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
+          getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
+        );
+      } else { // G84/G74 does not support chip breaking
+        error(localize("Tapping with chip breaking is not supported by the G74/G84 cycle."));
       }
       break;
     case "fine-boring":
@@ -1651,11 +1656,13 @@ function onCommand(command) {
     var abc = settings.workPlaneMethod.useTiltedWorkplane ? undefined : defineWorkPlane(currentSection, false);
     var start = getFramePosition(currentSection.getInitialPosition());
     var preloadTool = getNextTool(tool.number != getFirstTool().number);
-    // For same-tool non-TCP to TCP transitions, output bare G100 only (no coordinates/offset code)
+    // For TCP entries that use writeInitialPositioning, output bare G100 only (no coordinates/offset code)
     var isSameToolNonTCPtoTCP = tcp.isSupportedByOperation && !state.tcpIsActive && 
       !isFirstSection() && !isToolChangeNeeded() && isTCPSupportedByOperation(currentSection);
+    var isToolChangeTCPEntry = isToolChangeNeeded("number") && tcp.isSupportedByOperation &&
+      (currentSection.isMultiAxis() || currentSection.isOptimizedForMachine());
     
-    if (isSameToolNonTCPtoTCP) {
+    if (isSameToolNonTCPtoTCP || isToolChangeTCPEntry) {
       writeBlock(gFormat.format(100), "T" + toolFormat.format(tool.number));
     } else {
       writeToolBlock(gFormat.format(100),
@@ -1676,7 +1683,7 @@ function onCommand(command) {
     }
     writeComment(tool.comment);
     currentWorkPlaneABC = abc ? abc : currentWorkPlaneABC; // workplane is set with the G100 command
-    forceSpindleSpeed = isSameToolNonTCPtoTCP;
+    forceSpindleSpeed = isSameToolNonTCPtoTCP || isToolChangeTCPEntry;
 
     // for machine simulation, with TCP enabled G100 acts like prepositionWithTWP
     if (abc != undefined) {
