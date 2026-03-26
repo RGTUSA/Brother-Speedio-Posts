@@ -232,6 +232,14 @@ properties = {
     ],
     value: "284"
   },
+  showSmoothingAnnotations: {
+    title      : "Show smoothing annotations",
+    description: "Outputs comments describing smoothing mode changes in the NC code.",
+    group      : "preferences",
+    type       : "boolean",
+    value      : false,
+    scope      : "post"
+  },
   useMachiningLoadMonitor: {
     title      : "Machining Load Monitor",
     description: "Specifies if the Machining Load Monitor code (M341/M342/M343) should be output in nc code.",
@@ -582,10 +590,10 @@ function manageTcpLinkSmoothing(isLinkMove) {
   if (isLinkMove && !smoothing.tcpInLinkMove) {
     smoothing.tcpInLinkMove = true;
     var linkCode = parseInt(getProperty("fiveAxisLinkSmoothing"), 10);
-    writeBlock(mFormat.format(linkCode == 284 ? 284 : 289));
+    writeSmoothingBlock([mFormat.format(linkCode == 284 ? 284 : 289)], getSmoothingDescription("tcp5axis", linkCode == 284, linkCode == 284 ? 284 : -1));
   } else if (!isLinkMove && smoothing.tcpInLinkMove) {
     smoothing.tcpInLinkMove = false;
-    writeBlock(mFormat.format(smoothing.level));
+    writeSmoothingBlock([mFormat.format(smoothing.level)], getSmoothingDescription("tcp5axis", true, smoothing.level));
   }
 }
 
@@ -703,7 +711,7 @@ function onSection() {
   }
 
   if (isSimultaneousTCPSection(currentSection) && !state.tcpIsActive) {
-    writeBlock(mFormat.format(299));
+    writeSmoothingBlock([mFormat.format(299)], getSmoothingDescription("off", false, -1));
   }
 
   setSmoothing(smoothing.isAllowed);
@@ -3091,23 +3099,83 @@ function isSimultaneousTCPSection(_section) {
   return !!_section && _section.isMultiAxis() && isTCPSupportedByOperation(_section);
 }
 
-function outputSmoothingCommand(mode, commandMode, level) {
-  var mappedLevel = (level >= 0 && level <= 5) ? [0, 5, 3, 4, 1, 2][level] : level;
+function getSmoothingDescription(commandMode, mode, level) {
+  if (!mode) {
+    switch (commandMode) {
+    case "off":
+      return "SMOOTHING OFF";
+    case "tcp5axis":
+      return "5-AXIS TCP SMOOTHING OFF";
+    default:
+      return "HIGH ACCURACY MODE OFF";
+    }
+  }
+
   switch (commandMode) {
   case "A":
-    writeBlock(mFormat.format(mode ? 260 + mappedLevel : 269));
+  case "B":
+  case "M298":
+  default:
+    switch (level) {
+    case 0:
+      return "HIGH ACCURACY STANDARD";
+    case 1:
+      return "HIGH ACCURACY ROUGHING";
+    case 2:
+      return "HIGH ACCURACY MEDIUM ROUGH";
+    case 3:
+      return "HIGH ACCURACY MEDIUM ROUGH HIGH";
+    case 4:
+      return "HIGH ACCURACY FINISHING";
+    case 5:
+      return "HIGH ACCURACY FINISHING HIGH";
+    default:
+      return "HIGH ACCURACY MODE";
+    }
+  case "tcp5axis":
+    switch (level) {
+    case 280:
+      return "5-AXIS TCP SMOOTHING M280 STANDARD GENERAL USE";
+    case 281:
+      return "5-AXIS TCP SMOOTHING M281 VERY ACCURATE PATH ACCURACY LIMITED SMOOTHING";
+    case 282:
+      return "5-AXIS TCP SMOOTHING M282 VERY HIGH PATH ACCURACY MORE SMOOTHING";
+    case 283:
+      return "5-AXIS TCP SMOOTHING M283 HIGHEST PATH ACCURACY LIMITED SMOOTHING";
+    case 284:
+      return "5-AXIS TCP SMOOTHING M284 ROUGHING TRANSITION PATHS";
+    default:
+      return "5-AXIS TCP SMOOTHING";
+    }
+  }
+}
+
+function writeSmoothingBlock(words, description) {
+  var outputWords = words.slice(0);
+  if (getProperty("showSmoothingAnnotations") && description) {
+    outputWords.push(formatComment(description));
+  }
+  writeBlock.apply(null, outputWords);
+}
+
+function outputSmoothingCommand(mode, commandMode, level) {
+  var mappedLevel = (level >= 0 && level <= 5) ? [0, 5, 3, 4, 1, 2][level] : level;
+  var description = getSmoothingDescription(commandMode, mode, level);
+  switch (commandMode) {
+  case "A":
+    writeSmoothingBlock([mFormat.format(mode ? 260 + mappedLevel : 269)], description);
     break;
   case "B":
-    writeBlock(mFormat.format(mode ? 280 + mappedLevel : 289));
+    writeSmoothingBlock([mFormat.format(mode ? 280 + mappedLevel : 289)], description);
     break;
   case "tcp5axis":
-    writeBlock(mFormat.format(mode ? level : 289));
+    writeSmoothingBlock([mFormat.format(mode ? level : 289)], description);
     break;
   case "off":
-    writeBlock(mFormat.format(299));
+    writeSmoothingBlock([mFormat.format(299)], description);
     break;
   default:
-    writeBlock(mFormat.format(298), mode ? "L" + level : "L0");
+    writeSmoothingBlock([mFormat.format(298), mode ? "L" + level : "L0"], description);
     break;
   }
 }
