@@ -711,10 +711,14 @@ function onSection() {
   }
 
   if (isSimultaneousTCPSection(currentSection) && !state.tcpIsActive) {
+    setSmoothing(false); // cancel any previously active non-TCP smoothing before entering TCP setup
     writeSmoothingBlock([mFormat.format(299)], getSmoothingDescription("off", false, -1));
   }
 
-  setSmoothing(smoothing.isAllowed);
+  var deferTcpSmoothing = smoothing.isAllowed && smoothing.commandMode == "tcp5axis";
+  if (!deferTcpSmoothing) {
+    setSmoothing(smoothing.isAllowed);
+  }
 
   if (getProperty("washdownCoolant") == "always") {
     writeBlock(washdownModal.format(tool.type == TOOL_PROBE ? washdownCoolant.off : washdownCoolant.on));
@@ -740,6 +744,10 @@ function onSection() {
     } else {
       writeInitialPositioning(initialPosition, isRequired);
     }
+  }
+
+  if (deferTcpSmoothing) {
+    setSmoothing(smoothing.isAllowed);
   }
 
   // output the Machining Load Monitor code
@@ -1895,6 +1903,19 @@ function writeRetract() {
     }
     if (typeof disableLengthCompensation == "function" && getSetting("allowCancelTCPBeforeRetracting", false) && state.tcpIsActive) {
       disableLengthCompensation(); // cancel TCP before retracting
+    }
+    if (retract.retractAxes[2] && state.tcpIsActive) {
+      writeBlock(gFormat.format(100), "T" + toolFormat.format(currentToolNumber));
+      forceModals(gAbsIncModal);
+      writeBlock(gAbsIncModal.format(90));
+      var currentSectionNeedsSameToolRestart = (typeof currentSection != "undefined") && !isFirstSection() &&
+        !isToolChangeNeeded(getProperty("toolAsName") ? "description" : "number");
+      if (currentSectionNeedsSameToolRestart) {
+        forceSpindleSpeed = true;
+        forceCoolant = true;
+      }
+      machineSimulation({mode:RETRACTTOOLAXIS});
+      return;
     }
     for (var i in retract.words) {
       var words = retract.singleLine ? retract.words : retract.words[i];
