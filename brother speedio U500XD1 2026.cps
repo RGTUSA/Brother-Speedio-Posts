@@ -205,6 +205,33 @@ properties = {
     ],
     value: "-1"
   },
+  fiveAxisSmoothing: {
+    title      : "5-Axis TCP smoothing",
+    description: "Select the smoothing mode to use for simultaneous 5-axis TCP toolpaths.",
+    group      : "preferences",
+    type       : "enum",
+    values     : [
+      {title:"Off", id:"-1"},
+      {title:"Automatic", id:"9999"},
+      {title:"M280 - Standard/General Use", id:"280"},
+      {title:"M281 - Very Accurate Path Accuracy / Limited Smoothing", id:"281"},
+      {title:"M282 - Very High Path Accuracy / More Smoothing", id:"282"},
+      {title:"M283 - Highest Path Accuracy / Limited Smoothing", id:"283"},
+      {title:"M284 - Roughing/Transition Paths", id:"284"}
+    ],
+    value: "280"
+  },
+  fiveAxisLinkSmoothing: {
+    title      : "5-Axis TCP link move smoothing",
+    description: "Select the smoothing state used during simultaneous 5-axis TCP linking moves before returning to the section smoothing mode.",
+    group      : "preferences",
+    type       : "enum",
+    values     : [
+      {title:"Off", id:"-1"},
+      {title:"M284 - Roughing/Transition Paths", id:"284"}
+    ],
+    value: "284"
+  },
   useMachiningLoadMonitor: {
     title      : "Machining Load Monitor",
     description: "Specifies if the Machining Load Monitor code (M341/M342/M343) should be output in nc code.",
@@ -336,6 +363,10 @@ var settings = {
     semi                  : 3, // semi-roughing level for smoothing in automatic mode
     semifinishing         : 4, // semi-finishing level for smoothing in automatic mode
     finishing             : 5, // finishing level for smoothing in automatic mode
+    roughingTcp           : 284, // roughing level for simultaneous 5-axis TCP smoothing in automatic mode
+    semiTcp               : 283, // semi-roughing level for simultaneous 5-axis TCP smoothing in automatic mode
+    semifinishingTcp      : 282, // semi-finishing level for simultaneous 5-axis TCP smoothing in automatic mode
+    finishingTcp          : 281, // finishing level for simultaneous 5-axis TCP smoothing in automatic mode
     thresholdRoughing     : toPreciseUnit(0.5, MM), // operations with stock/tolerance above that threshold will use roughing level in automatic mode
     thresholdFinishing    : toPreciseUnit(0.05, MM), // operations with stock/tolerance below that threshold will use finishing level in automatic mode
     thresholdSemiFinishing: toPreciseUnit(0.1, MM), // operations with stock/tolerance above finishing and below threshold roughing that threshold will use semi finishing level in automatic mode
@@ -533,8 +564,29 @@ function setSmoothing(mode) {
   outputSmoothingCommand(mode, (!mode && commandMode == "off") ? commandMode : (mode ? commandMode : (smoothing.activeMode || commandMode)), smoothing.level);
   smoothing.isActive = mode;
   smoothing.activeMode = mode ? commandMode : undefined;
+  smoothing.tcpInLinkMove = mode ? smoothing.tcpInLinkMove : false;
   smoothing.force = false;
   smoothing.isDifferent = false;
+}
+
+function isTcpLinkMove() {
+  return (typeof movement != "undefined") && ((movement == MOVEMENT_LINK_TRANSITION) || (movement == MOVEMENT_LINK_DIRECT) || (movement == MOVEMENT_HIGH_FEED));
+}
+
+function manageTcpLinkSmoothing(isLinkMove) {
+  if (smoothing.commandMode != "tcp5axis" || smoothing.level == -1) {
+    smoothing.tcpInLinkMove = false;
+    return;
+  }
+
+  if (isLinkMove && !smoothing.tcpInLinkMove) {
+    smoothing.tcpInLinkMove = true;
+    var linkCode = parseInt(getProperty("fiveAxisLinkSmoothing"), 10);
+    writeBlock(mFormat.format(linkCode == 284 ? 284 : 289));
+  } else if (!isLinkMove && smoothing.tcpInLinkMove) {
+    smoothing.tcpInLinkMove = false;
+    writeBlock(mFormat.format(smoothing.level));
+  }
 }
 
 function printProbeResults() {
@@ -554,10 +606,11 @@ function onSection() {
   // Check if current section needs TCP (for same-tool transitions from non-TCP)
   var currentSectionNeedsTCP = isTCPSupportedByOperation(currentSection) && !toolChange;
   var sameToolTCPEntry = currentSectionNeedsTCP && !insertToolCall;
+  var sameToolAfterTCP = !insertToolCall && state.tcpIsActive;
   var toolChangeTCPEntry = toolChange && isTCPSupportedByOperation(currentSection) &&
     (currentSection.isMultiAxis() || currentSection.isOptimizedForMachine());
 
-  if (sameToolTCPEntry) {
+  if (sameToolTCPEntry || sameToolAfterTCP) {
     forceSpindleSpeed = true;
     forceCoolant = true;
   }
@@ -566,6 +619,8 @@ function onSection() {
     if (insertToolCall && !isFirstSection()) {
       onCommand(COMMAND_COOLANT_OFF); // turn off coolant before retract during tool change
       onCommand(COMMAND_STOP_SPINDLE); // stop spindle before retract during tool change
+    } else if (state.tcpIsActive || currentSectionNeedsTCP) {
+      onCommand(COMMAND_COOLANT_OFF); // turn off coolant before home retract when entering or leaving TCP; next section will reissue coolant as needed
     }
     writeRetract(Z); // retract
     disableLengthCompensation();
@@ -616,7 +671,7 @@ function onSection() {
     formatWords(gPlaneModal.format(17), gAbsIncModal.format(90), gFeedModeModal.format(94)); // re-apply modal format
   } else {
     defineWorkPlane(currentSection, true);
-    if (!sameToolTCPEntry) {
+    if (!sameToolTCPEntry || sameToolAfterTCP) {
       startSpindle(tool, insertToolCall);
     }
   }
@@ -632,7 +687,7 @@ function onSection() {
 
   setProbeAngle(); // output probe angle rotations if required
 
-  if (!sameToolTCPEntry) {
+  if (!sameToolTCPEntry || sameToolAfterTCP) {
     setCoolant(tool.coolant); // writes the required coolant codes
     // add dwell for through coolant if needed
     if (tool.coolant == COOLANT_THROUGH_TOOL || tool.coolant == COOLANT_AIR_THROUGH_TOOL || tool.coolant == COOLANT_FLOOD_THROUGH_TOOL) {
@@ -645,6 +700,10 @@ function onSection() {
         }
       }
     }
+  }
+
+  if (isSimultaneousTCPSection(currentSection) && !state.tcpIsActive) {
+    writeBlock(mFormat.format(299));
   }
 
   setSmoothing(smoothing.isAllowed);
@@ -1765,6 +1824,12 @@ function onCommand(command) {
 }
 
 function onSectionEnd() {
+  if (smoothing.tcpInLinkMove) {
+    smoothing.tcpInLinkMove = false;
+    if (smoothing.commandMode == "tcp5axis" && smoothing.level != -1) {
+      writeBlock(mFormat.format(smoothing.level));
+    }
+  }
   if (currentSection.isMultiAxis()) {
     writeBlock(gFeedModeModal.format(94)); // inverse time feed off
   }
@@ -1822,17 +1887,6 @@ function writeRetract() {
     }
     if (typeof disableLengthCompensation == "function" && getSetting("allowCancelTCPBeforeRetracting", false) && state.tcpIsActive) {
       disableLengthCompensation(); // cancel TCP before retracting
-    }
-    if (retract.retractAxes[2] && state.tcpIsActive) {
-      writeBlock(gFormat.format(100), "T" + toolFormat.format(currentToolNumber));
-      var currentSectionNeedsSameToolRestart = (typeof currentSection != "undefined") && !isFirstSection() &&
-        !isToolChangeNeeded(getProperty("toolAsName") ? "description" : "number");
-      if (currentSectionNeedsSameToolRestart) {
-        forceSpindleSpeed = true;
-        forceCoolant = true;
-      }
-      machineSimulation({mode:RETRACTTOOLAXIS});
-      return;
     }
     for (var i in retract.words) {
       var words = retract.singleLine ? retract.words : retract.words[i];
@@ -3029,7 +3083,8 @@ var smoothing = {
   tolerance  : -1, // the current operation tolerance
   force      : false, // smoothing needs to be forced out in this operation
   commandMode: undefined, // smoothing command family for the current section
-  activeMode : undefined // smoothing command family currently active on the control
+  activeMode : undefined, // smoothing command family currently active on the control
+  tcpInLinkMove: false // simultaneous 5-axis TCP section is temporarily using link-move smoothing
 };
 
 function isSimultaneousTCPSection(_section) {
@@ -3045,6 +3100,9 @@ function outputSmoothingCommand(mode, commandMode, level) {
   case "B":
     writeBlock(mFormat.format(mode ? 280 + mappedLevel : 289));
     break;
+  case "tcp5axis":
+    writeBlock(mFormat.format(mode ? level : 289));
+    break;
   case "off":
     writeBlock(mFormat.format(299));
     break;
@@ -3059,6 +3117,7 @@ function initializeSmoothing() {
   var previousLevel = smoothing.level;
   var previousTolerance = xyzFormat.getResultingValue(smoothing.tolerance);
   var previousCommandMode = smoothing.commandMode;
+  var isTcp5AxisSection = isSimultaneousTCPSection(currentSection);
 
   // format threshold parameters
   var thresholdRoughing = xyzFormat.getResultingValue(smoothingSettings.thresholdRoughing);
@@ -3066,8 +3125,8 @@ function initializeSmoothing() {
   var thresholdFinishing = xyzFormat.getResultingValue(smoothingSettings.thresholdFinishing);
 
   // determine new smoothing levels and tolerances
-  smoothing.commandMode = isTCPSupportedByOperation(currentSection) ? "off" : getProperty("smoothingMode");
-  smoothing.level = parseInt(getProperty("useSmoothing"), 10);
+  smoothing.commandMode = isTcp5AxisSection ? "tcp5axis" : getProperty("smoothingMode");
+  smoothing.level = parseInt(isTcp5AxisSection ? getProperty("fiveAxisSmoothing") : getProperty("useSmoothing"), 10);
   smoothing.level = isNaN(smoothing.level) ? -1 : smoothing.level;
   smoothing.tolerance = xyzFormat.getResultingValue(Math.max(getParameter("operation:tolerance", thresholdFinishing), 0));
 
@@ -3076,7 +3135,33 @@ function initializeSmoothing() {
   }
 
   if (smoothing.level == 9999) {
-    if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
+    if (isTcp5AxisSection) {
+      if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
+        var stockToLeaveTcp = xyzFormat.getResultingValue(getParameter("operation:stockToLeave", getParameter("operation:verticalStockToLeave", 0)));
+        var verticalStockToLeaveTcp = xyzFormat.getResultingValue(getParameter("operation:verticalStockToLeave", stockToLeaveTcp));
+        if (((stockToLeaveTcp >= thresholdRoughing) && (verticalStockToLeaveTcp >= thresholdRoughing)) || getParameter("operation:strategy", "") == "face") {
+          smoothing.level = smoothingSettings.roughingTcp;
+        } else if (((stockToLeaveTcp >= thresholdSemiFinishing) && (stockToLeaveTcp < thresholdRoughing)) &&
+          ((verticalStockToLeaveTcp >= thresholdSemiFinishing) && (verticalStockToLeaveTcp < thresholdRoughing))) {
+          smoothing.level = smoothingSettings.semiTcp;
+        } else if (((stockToLeaveTcp >= thresholdFinishing) && (stockToLeaveTcp < thresholdSemiFinishing)) &&
+          ((verticalStockToLeaveTcp >= thresholdFinishing) && (verticalStockToLeaveTcp < thresholdSemiFinishing))) {
+          smoothing.level = smoothingSettings.semifinishingTcp;
+        } else {
+          smoothing.level = smoothingSettings.finishingTcp;
+        }
+      } else {
+        if (smoothing.tolerance >= thresholdRoughing || getParameter("operation:strategy", "") == "face") {
+          smoothing.level = smoothingSettings.roughingTcp;
+        } else if ((smoothing.tolerance >= thresholdSemiFinishing) && (smoothing.tolerance < thresholdRoughing)) {
+          smoothing.level = smoothingSettings.semiTcp;
+        } else if ((smoothing.tolerance >= thresholdFinishing) && (smoothing.tolerance < thresholdSemiFinishing)) {
+          smoothing.level = smoothingSettings.semifinishingTcp;
+        } else {
+          smoothing.level = smoothingSettings.finishingTcp;
+        }
+      }
+    } else if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
       var stockToLeave = xyzFormat.getResultingValue(getParameter("operation:stockToLeave", getParameter("operation:verticalStockToLeave", 0)));
       var verticalStockToLeave = xyzFormat.getResultingValue(getParameter("operation:verticalStockToLeave", stockToLeave));
       if (((stockToLeave >= thresholdRoughing) && (verticalStockToLeave >= thresholdRoughing)) || getParameter("operation:strategy", "") == "face") {
@@ -3272,6 +3357,9 @@ function onRapid5D(_x, _y, _z, _a, _b, _c) {
     error(localize("Radius compensation mode cannot be changed at rapid traversal."));
     return;
   }
+  var isTcp5AxisSection = isSimultaneousTCPSection(currentSection);
+  var useHighFeedLinkMove = isTcp5AxisSection && isTcpLinkMove();
+  manageTcpLinkSmoothing(useHighFeedLinkMove);
   if (!currentSection.isOptimizedForMachine()) {
     forceXYZ();
   }
@@ -3283,7 +3371,12 @@ function onRapid5D(_x, _y, _z, _a, _b, _c) {
   var c = currentSection.isOptimizedForMachine() ? cOutput.format(_c) : toolVectorOutputK.format(_c);
 
   if (x || y || z || a || b || c) {
-    writeBlock(gMotionModal.format(0), x, y, z, a, b, c);
+    if (useHighFeedLinkMove) {
+      forceFeed();
+      writeBlock(gFeedModeModal.format(getProperty("useG95") ? 95 : 94), gMotionModal.format(1), x, y, z, a, b, c, getFeed(highFeedrate));
+    } else {
+      writeBlock(gMotionModal.format(0), x, y, z, a, b, c);
+    }
     forceFeed();
   }
 }
@@ -3294,6 +3387,7 @@ function onLinear5D(_x, _y, _z, _a, _b, _c, feed, feedMode) {
     error(localize("Radius compensation cannot be activated/deactivated for 5-axis move."));
     return;
   }
+  manageTcpLinkSmoothing(isSimultaneousTCPSection(currentSection) && isTcpLinkMove());
   if (!currentSection.isOptimizedForMachine()) {
     forceXYZ();
   }
