@@ -679,7 +679,7 @@ function onSection() {
     formatWords(gPlaneModal.format(17), gAbsIncModal.format(90), gFeedModeModal.format(94)); // re-apply modal format
   } else {
     defineWorkPlane(currentSection, true);
-    if (!sameToolTCPEntry || sameToolAfterTCP) {
+    if (!sameToolTCPEntry) {
       startSpindle(tool, insertToolCall);
     }
   }
@@ -695,7 +695,7 @@ function onSection() {
 
   setProbeAngle(); // output probe angle rotations if required
 
-  if (!sameToolTCPEntry || sameToolAfterTCP) {
+  if (!sameToolTCPEntry) {
     setCoolant(tool.coolant); // writes the required coolant codes
     // add dwell for through coolant if needed
     if (tool.coolant == COOLANT_THROUGH_TOOL || tool.coolant == COOLANT_AIR_THROUGH_TOOL || tool.coolant == COOLANT_FLOOD_THROUGH_TOOL) {
