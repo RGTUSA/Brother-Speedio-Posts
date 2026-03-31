@@ -54,7 +54,7 @@ properties = {
     description: "Preloads the next tool at a tool change (if any).",
     group      : "preferences",
     type       : "boolean",
-    value      : true,
+    value      : false,
     scope      : "post"
   },
   showSequenceNumbers: {
@@ -67,7 +67,7 @@ properties = {
       {title:"No", id:"false"},
       {title:"Only on tool change", id:"toolChange"}
     ],
-    value: "true",
+    value: "false",
     scope: "post"
   },
   sequenceNumberStart: {
@@ -107,7 +107,7 @@ properties = {
     description: "When enabled, outputs M450 before manual M00 stops and before M30 at program end.",
     group      : "preferences",
     type       : "boolean",
-    value      : false,
+    value      : true,
     scope      : "post"
   },
   separateWordsWithSpace: {
@@ -199,7 +199,7 @@ properties = {
       {title:"Renishaw", id:"Renishaw"},
       {title:"Blum", id:"Blum"}
     ],
-    value: "Renishaw",
+    value: "Blum",
     scope: "post"
   },
   washdownCoolant: {
@@ -213,7 +213,7 @@ properties = {
       {title:"End of operation", id:"operationEnd"},
       {title:"Program end", id:"programEnd"}
     ],
-    value: "off",
+    value: "always",
     scope: "post"
   },
   usePitchForTapping: {
@@ -229,7 +229,7 @@ properties = {
     description: "If enabled, an L value containing double the spindle speed (up to 6000) will be output in the G77 tapping cycle.",
     group      : "preferences",
     type       : "boolean",
-    value      : false,
+    value      : true,
     scope      : "post"
   },
   tapAccel: {
@@ -264,7 +264,7 @@ properties = {
       {title:"B", id:"B"},
       {title:"M298", id:"M298"}
     ],
-    value: "A"
+    value: "M298"
   },
   useSmoothing: {
     title      : "High accuracy level",
@@ -281,7 +281,7 @@ properties = {
       {title:"Finishing", id:"4"}, // 1
       {title:"Finishing high", id:"5"} // 2
     ],
-    value: "-1"
+    value: "9999"
   },
   accuracyOverride: {
     title      : "Accuracy mode",
@@ -315,7 +315,7 @@ properties = {
       {title:"Stock to Leave", id:"stock"},
       {title:"Tolerance", id:"tolerance"}
     ],
-    value      : "stock",
+    value      : "tolerance",
     scope      : "post"
   },
   rapidTransitions: {
@@ -378,7 +378,7 @@ properties = {
       {title:"No Move", id:"noMove"},
       {title:"Center at Door", id:"centerAtDoor"}
     ],
-    value      : "home",
+    value      : "centerAtDoor",
     scope      : "post"
   },
   separateZOnToolChange: {
