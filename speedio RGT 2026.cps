@@ -913,6 +913,11 @@ function onSpindleSpeed(spindleSpeed) {
   writeBlock(sOutput.format(spindleSpeed));
 }
 
+function getTapWithdrawSpeed(spindleSpeed) {
+  var withdrawSpeed = Math.min(spindleSpeed * 2, 6000);
+  return Math.round(withdrawSpeed / 2) * 2; // Brother expects an even L value
+}
+
 function onCycle() {
   writeBlock(gPlaneModal.format(17));
 }
@@ -1048,7 +1053,7 @@ function writeDrillCycle(cycle, x, y, z) {
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
           sOutput.format(spindleSpeed),
-          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + getTapWithdrawSpeed(spindleSpeed) : ""
         );
       } else {
         writeBlock(
@@ -1071,7 +1076,7 @@ function writeDrillCycle(cycle, x, y, z) {
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
           sOutput.format(spindleSpeed),
-          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + getTapWithdrawSpeed(spindleSpeed) : ""
         );
       } else {
         writeBlock(
@@ -1094,7 +1099,7 @@ function writeDrillCycle(cycle, x, y, z) {
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
           sOutput.format(spindleSpeed),
-          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + getTapWithdrawSpeed(spindleSpeed) : ""
         );
       } else {
         writeBlock(
@@ -1120,7 +1125,7 @@ function writeDrillCycle(cycle, x, y, z) {
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
           sOutput.format(spindleSpeed),
-          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + getTapWithdrawSpeed(spindleSpeed) : ""
         );
       } else { // G84/G74 does not support chip breaking
         error(localize("Tapping with chip breaking is not supported by the G74/G84 cycle."));
