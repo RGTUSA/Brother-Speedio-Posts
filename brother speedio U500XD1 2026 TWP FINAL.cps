@@ -46,7 +46,7 @@ properties = {
     description: "Preloads the next tool at a tool change (if any).",
     group      : "preferences",
     type       : "boolean",
-    value      : true,
+    value      : false,
     scope      : "post"
   },
   showSequenceNumbers: {
@@ -59,7 +59,7 @@ properties = {
       {title:"No", id:"false"},
       {title:"Only on tool change", id:"toolChange"}
     ],
-    value: "true",
+    value: "false",
     scope: "post"
   },
   sequenceNumberStart: {
@@ -149,7 +149,7 @@ properties = {
       {title:"End of operation", id:"operationEnd"},
       {title:"Program end", id:"programEnd"}
     ],
-    value: "off",
+    value: "always",
     scope: "post"
   },
   usePitchForTapping: {
@@ -165,7 +165,7 @@ properties = {
     description: "If enabled, an L value containing double the spindle speed (up to 6000) will be output in the G77 tapping cycle.",
     group      : "preferences",
     type       : "boolean",
-    value      : false,
+    value      : true,
     scope      : "post"
   },
   useClampCodes: {
@@ -186,7 +186,7 @@ properties = {
       {title:"B", id:"B"},
       {title:"M298", id:"M298"}
     ],
-    value: "A"
+    value: "M298"
   },
   useSmoothing: {
     title      : "High accuracy level",
@@ -203,7 +203,7 @@ properties = {
       {title:"Finishing", id:"4"}, // 1
       {title:"Finishing high", id:"5"} // 2
     ],
-    value: "-1"
+    value: "9999"
   },
   fiveAxisSmoothing: {
     title      : "5-Axis TCP smoothing",
@@ -220,7 +220,7 @@ properties = {
       {title:"M284 - Roughing/Transition Paths", id:"284"},
       {title:"M285 - Custom (Deburr Cutting)", id:"285"}
     ],
-    value: "280"
+    value: "285"
   },
   fiveAxisLinkSmoothing: {
     title      : "5-Axis TCP link move smoothing",
@@ -238,7 +238,7 @@ properties = {
     description: "Outputs comments describing smoothing mode changes in the NC code.",
     group      : "preferences",
     type       : "boolean",
-    value      : false,
+    value      : true,
     scope      : "post"
   },
   useMachiningLoadMonitor: {
@@ -280,7 +280,7 @@ properties = {
     description: "Enable to use G68.2 for 3+2 operations.",
     group      : "multiAxis",
     type       : "boolean",
-    value      : false,
+    value      : true,
     scope      : "machine"
   },
   singleResultsFile: {
@@ -500,7 +500,7 @@ function defineMachine() {
 }
 
 function onOpen() {
-  writeln("(POST REV: U500XD1 TWP FINAL 2026-07-30C SM4125FIX)"); // TWP FORK: revision tracer - proves which post copy generated this file
+  writeln("(POST REV: U500XD1 TWP FINAL 2026-07-30D DEFAULTS)"); // TWP FORK: revision tracer - proves which post copy generated this file
   // define and enable machine configuration
   receivedMachineConfiguration = machineConfiguration.isReceived();
   if (typeof defineMachine == "function") {
