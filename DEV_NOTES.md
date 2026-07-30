@@ -1,5 +1,28 @@
 # Developer Notes
 
+Date: 2026-07-30
+
+Release tag: `v2026.07.30-twp-final`
+
+## Post: brother speedio U500XD1 2026 TWP FINAL.cps
+Fork of `brother speedio U500XD1 2026.cps` (rev 44214). All changes marked `// TWP FORK:` in code. See CHANGELOG 2026-07-30 for the feature list. Full engineering writeups with manual citations live in `Claude Workspace\Projects\Brother U500XD1\` (Tilted-Plane WCS Probing.md, vault notes, TWP Probing Post - Tech Breakdown.pdf).
+
+## Machine-side settings this post assumes (U500Xd1, D-00)
+- Pendant 5-axes-machining (By M code): M284 = corner decel 999/999/999, accel 100/100/100, smooth 999 (link level). M285 = 250/250/250, 100s, 250 (deburr cutting level, Yamazen stock).
+- Renishaw Inspection Plus (O87xx/O88xx) loaded; O8744 configured #30=13 (A/C).
+- Recommended Fusion setup for deburr/link-heavy TCP ops: 5-Axis TCP smoothing = M285, link move smoothing = M284, op Linking = high feedrate mode ON + allow rapid retract OFF (rapids under TCP stop at every block).
+
+## Validation
+- O1601 vs O1611 (probing), O0200 vs O0201 (smoothing/SM4125), coupon parts 2026-07-30. Machine dry-run + first-article checks performed by Steve.
+
+## Notes
+- The DRY RUN key disables TCP look-ahead accel/decel — never evaluate motion quality with it on.
+- Fusion post-selection gotcha: machine definitions and Downloads copies snapshot the post. The output tracer line is the source of truth for which copy posted a file.
+
+---
+
+# Developer Notes
+
 Date: 2026-02-27
 
 Release tag: `v2026.02.27-probing-fix`
