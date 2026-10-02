@@ -23,3 +23,4 @@ Kept for diffs, history and borrowing code. **Production posts live in the repo 
 | File | What it is |
 |---|---|
 | `brother speedio U500XD1 TWP 44242 EXP.cps` | U500 fork ported onto 44242 (X0929C). Not for production until side-by-side NC compares pass. |
+| `speedio RGT 2026 EXP E1002 backup.cps` … `E1014.cps` | Earlier versions of the S-machine test post. The current one (E1015) is in the repo root. See CHANGELOG 2026-10-02. |

@@ -5,6 +5,7 @@
 |---|---|---|
 | `brother speedio U500XD1 2026 TWP FINAL.cps` | **U500XD1** (5-axis, D-00, Renishaw) | Production, tag **R1001** |
 | `speedio RGT 2026.cps` | **S-machines** (S700X2 ×3, S700X1, S500X1: C-00, Blum), 3-axis + 4th axis on S700X2-6 Green | Intended replacement for RGTSPD; **4th-axis output still to be validated** against RGTSPD O1401 |
+| `speedio RGT 2026 EXP E1015.cps` | S-machines, **test** | Machine detection + checks, Green 4th-axis tool change / break check, Fusion sim clean on O1401. Not yet run on the machine. Becomes the next `speedio RGT 2026` once machine-tested. |
 
 Everything else (stock Autodesk, RGTSPD, Wildgoose, old forks, experiments) is in `reference/`. See `reference/README.md`.
 

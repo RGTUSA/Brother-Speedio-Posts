@@ -2,6 +2,29 @@
 
 All notable changes to this post set are documented in this file.
 
+## 2026-10-02
+
+### S-machine test post now `speedio RGT 2026 EXP E1015.cps` (repo root), tag **E1015**: Fusion sim clean on O1401 (Green)
+Production `speedio RGT 2026.cps` still unchanged. Each test version has the tag in its file name; older ones are in `reference/experimental/`. O1401 G-code from E1015 matches the RGTSPD-style moves (A always 0-359.999, short-way indexing).
+- **E1003** Tool break: no second `M05` after `M98 P8000` (M05 before it stays). **A0 before tool change / tool break** (property, default ON, 4th-axis machines only): `G28 G91 Z0` then `G00 A0.` so the machine matches the sim. Machine home X/Y properties (G53, used by the "Home" end position; Center at Door Y also uses Machine home Y). Ported from Autodesk 44242: G87 back-bore Z fix.
+- **E1004** File name carries the version.
+- **E1005-E1008** Sim of the O8000 break check: Z top, G53 to the tool setter (#701 -26.59 / #702 0), rapid to 1" above, feed to 0.05" above the touch (#704 5.9406 + tool gauge length), back to Z top. Fusion Z/X/Y lined up by matching the machine-definition range maximum to machine Z top (18.8976) / X0 / Y0. Sim-only properties: Tool setter X/Y/Z, Machine Z top, touch gap. (A sim tool change there is not allowed - only one per connection.)
+- **E1009-E1014** A-axis direction in the sim (several wrong turns, see E1015).
+- **E1013** Turned OFF the 44242 `activateWorkCoordsForNextOperation` sim call again (same breakage as the U500 X0929 test).
+- **E1015** The Speedio indexes A the short way (rollover). With A Range Unlimited in the machine definition and sim direction "Shortest" (property, default), the sim matches. Property **"L plate on"** (default ON): index (3+2) angles are folded into 0-359.999 (A360 -> A0, A-90 -> A270, A450 -> A90); 4/5-axis ops are not folded but must stay 0-359.999 or posting stops. Turn it OFF with the L plate off (round parts, wrapping).
+- Machine definition settings that go with this post: see the Green machine folder README.
+- Not done: 4th-axis safe tool change return path (Z up, Y to rear, then X). Machine test: MDI `G90 G00 A45.` then `A315.` should go -90 through 0; single-block the first tool change / break check / A270->A0 index.
+
+### New test post: `reference/experimental/speedio RGT 2026 EXP.cps` (tag **E1002**)
+Built from `speedio RGT 2026.cps`. **Production `speedio RGT 2026.cps` is unchanged** (restored to its April version). Everything below is in the EXP post only, for testing on the S-machines:
+- **Machine profiles + pre-post checks** (`rgtMachines`, `rgtCheckMachine()`), new property **Target machine** (Auto / Orange / Black / Red / Yellow / Green). Auto reads the Fusion machine-definition vendor/model/description: full ID (`S700X2-6`) first, then the colour word, then S500X1 / S700X1 (unique models). Can't identify it → post stops and asks.
+  - S500X1-4 Orange 10,000 RPM / 14 tools · S700X1-2 Black 16k / 21 (CTS out of service) · S700X2-1 Red, S700X2-3 Yellow 16k / 21 · S700X2-6 Green 16k / 21 + 4th axis
+  - **Errors:** any op over the machine's max RPM (names the op and tool), more distinct tools than the magazine holds, a rotary/indexed op on a 3-axis machine, *Use A-axis* on for a non-Green machine. **Warning:** through-spindle coolant on Black.
+  - Writes `(TARGET MACHINE …)` in the header; the rev tag is on the program-name line.
+- **Simulation fix:** `machineSimulation()` skips the `X[#5021-#5041+…]` Center-at-Door expression instead of erroring (NC unchanged).
+- **4th-axis safe tool change** (property, default OFF): `G100 T_ D_ S_ M03` only, then `G00 A_`, `G00 X_` (clear the L plate), `G00 Y_` (forward), `G43 Z_ H_`. Return path (Z up, Y to the rear, then X to setter/home) **not done yet**.
+- Untested: post a Green job and a 3-axis job, check the header and the errors, then single-block on the machine.
+
 ## 2026-10-01
 
 ### Changed
