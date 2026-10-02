@@ -2,6 +2,36 @@
 
 All notable changes to this post set are documented in this file.
 
+## 2026-10-01
+
+### Changed
+- Post tag `R1001`, a **defaults-only** change on top of the tested R0928. `partAccessX` now defaults to **-11.75** (Steve's door position, in program units: inch programs), so new NC programs no longer start at 0. All other defaults were already matching the known-good Gimbal OP1 / O1522 settings (TCP smoothing M285, link M284, M298 Automatic, washdown Always, part access on M00 + end + level table). No NC output change other than the tag and the default X.
+
+## 2026-09-28
+
+### Changed
+- Post tag `R0928`. Part access now levels the table **A0 C0 at Z home before the X/Y move**, at program end and (property `partAccessLevelTable`, now default ON) at M00 - same order as the O8000 break-check macro (G28 Z, G28 A, then XY).
+- Verified O1522 (R0925D): program end posts `G49 / G69 / (PART ACCESS POSITION) G53 G00 X-11.75 Y0` (X-11.75 Y0 = Steve's door position). M00 path still to be tested.
+
+## 2026-09-25
+
+### Release
+- `brother speedio U500XD1 2026 TWP FINAL.cps` revisions R0925 -> R0925D. Suggested git tag: `v2026.09.25-rewind-fix`.
+- Revision tracer line removed; the tag now lives in the Fusion post name ("... TWP FINAL R0925D") and is appended to the program-name line: `(O1521 GIMBAL OP1 R0925D)`. Bump `postRevTag` + `description` together.
+
+### Fixed
+- **SM4039.004 on rewind** (retract-and-reconfigure): M280-M287 stay modal after G49 as high-accuracy mode B (NC Prog. 14.2.6.5 NOTE 1); a G01 moving A+C in mode B alarms (14.1.6). Rewind now writes `M289` after G49 and restores the exact prior smoothing (M284 link / section level) after the re-entry `G43.4`; link-smoothing swaps are frozen during the rewind. Stock `rewind.cpi` (44214 and 44222) has the same gap.
+- Rewind rotary index posts as `G00 A_ C_` instead of `G01 ... F200` (~57 s at 200 deg/min). Gated by the rewind flag only - normal TCP links still post high-feed G01.
+- **Spindle/coolant restart after rewind**: the TCP retract `G100 T__` stops the spindle and nothing restarted it before the re-entry plunge. `S__ M03` + `M08` now output right after the index at Z home.
+- Fusion machine simulation "Tool-change instruction missing" / "Connection without a tool": bare `G100 T__` for tool-change TCP entries now signals `machineSimulation({mode:TOOLCHANGE})`. Simulation only.
+
+### Added
+- Part access position: new properties `partAccessOnStop`, `partAccessOnProgramEnd`, `partAccessX`, `partAccessY` (G53 machine coords, program units, default 0/0 = old behaviour), `partAccessLevelTable`. Manual NC Stop between ops runs the break-control safe sequence (M09, retract, G49, G69, smoothing off, M05) then `G90 G53 G00 X_ Y_` before `M00`; program end uses the same X/Y instead of `G53 G00 X0 Y0` (and now also gets a G69 before the final A0 C0). M00s written inside an operation are unaffected (`inSection` gate).
+
+### Verified
+- O1520 (tracer 2026-07-30D DEFAULTS) alarmed SM4039.004 at line 3614; O1521 (R0925C) ran the rewind clean on the machine 2026-09-25 - index, spindle restart and M284 restore confirmed. Fusion simulation clean with R0925B+.
+- Part access (R0925D): **not yet machine-tested.**
+
 ## 2026-07-30
 
 ### Release

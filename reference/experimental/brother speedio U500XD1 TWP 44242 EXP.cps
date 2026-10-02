@@ -4,21 +4,21 @@
 
   Brother Speedio post processor configuration.
 
-  $Revision: 44214 1f74fb3c348cc93e66ee15e354e2015b2aaf19e6 $
-  $Date: 2026-02-17 04:16:48 $
+  $Revision: 44242 3cf9e6b9a2316d35ea15c48009d2b6baa5ce6b7c $
+  $Date: 2026-09-07 11:41:47 $
 
   FORKID {C09133CD-6F13-4DFC-9EB8-41260FBB5B08}
 */
 
-description = "Brother Speedio U500XD1 2026 TWP FINAL R1001";
-var postRevTag = "R1001"; // TWP FORK: post revision tag - appended to the program name line to prove which post copy generated the file
+description = "Brother Speedio U500XD1 TWP 44242 EXP X0929C";
+var postRevTag = "X0929C"; // EXPERIMENTAL 44242 port - not for production until side-by-side NC compare passes // TWP FORK: post revision tag - appended to the program name line to prove which post copy generated the file
 vendor = "Brother";
 vendorUrl = "http://www.brother.com";
 legal = "Copyright (C) 2012-2026 by Autodesk, Inc.";
 certificationLevel = 2;
 minimumRevision = 45917;
 
-longDescription = "RGT fork of the U500XD1 2026 post with tilted-work-plane (G68.2) WCS probing support for the Renishaw Inspection Plus suite on the D-00 control. Under an active G68.2, probe cycles with a WCS override post as geometry-only (errors bank in #151/#152/#153); the section end emits G65 P8744 (FCS-to-WCS conversion, in-frame) then G49/G69 and G65 P8732 (offset write, out-of-frame) because the D-00 blocks work offset writes while feature coordinate manufacturing mode is engaged (SM4107). Also enforces G49 before every G69 (SM4106). Flat (non-TWP) probing posts identically to the parent post. Angular/plane-angle WCS probing under TWP is not supported by this scheme.";
+longDescription = "EXPERIMENTAL: TWP FINAL R0928 ported onto stock Autodesk rev 44242 (three-way merge 2026-09-29). Adds 44242 probe link feed, G87 back-boring fix, simulation rotary-shortest + WCS switching. Production post remains TWP FINAL R0928. RGT fork of the U500XD1 2026 post with tilted-work-plane (G68.2) WCS probing support for the Renishaw Inspection Plus suite on the D-00 control. Under an active G68.2, probe cycles with a WCS override post as geometry-only (errors bank in #151/#152/#153); the section end emits G65 P8744 (FCS-to-WCS conversion, in-frame) then G49/G69 and G65 P8732 (offset write, out-of-frame) because the D-00 blocks work offset writes while feature coordinate manufacturing mode is engaged (SM4107). Also enforces G49 before every G69 (SM4106). Flat (non-TWP) probing posts identically to the parent post. Angular/plane-angle WCS probing under TWP is not supported by this scheme.";
 
 extension = "NC";
 programNameIsInteger = false;
@@ -61,6 +61,7 @@ properties = {
       {title:"Only on tool change", id:"toolChange"}
     ],
     value: "false",
+    order: 1,
     scope: "post"
   },
   sequenceNumberStart: {
@@ -69,6 +70,7 @@ properties = {
     group      : "formats",
     type       : "integer",
     value      : 10,
+    order      : 2,
     scope      : "post"
   },
   sequenceNumberIncrement: {
@@ -77,6 +79,7 @@ properties = {
     group      : "formats",
     type       : "integer",
     value      : 5,
+    order      : 3,
     scope      : "post"
   },
   partAccessOnStop: {
@@ -100,7 +103,7 @@ properties = {
     description: "TWP FORK: G53 MACHINE coordinate X for the table part-access position (front/center of the door), in program units. Jog there on the pendant and read the MACHINE position. 0 = machine home.",
     group      : "preferences",
     type       : "number",
-    value      : -11.75,
+    value      : 0,
     scope      : "post"
   },
   partAccessY: {
@@ -590,7 +593,7 @@ function onOpen() {
 
   // absolute coordinates and feed per min
   writeBlock(gMotionModal.format(0), gAbsIncModal.format(90), gFormat.format(40), gFormat.format(80));
-  writeBlock(gFeedModeModal.format(94), toolLengthCompOutput.format(49));
+  writeBlock(gFeedModeModal.format(94), lengthCompOutput.format(lengthCompCodes.cancel));
 
   writeComment("File output in " + (unit == 1 ? "MM" : "inches") + ". Please ensure the unit is set correctly on the control");
   validateCommonParameters();
@@ -669,7 +672,7 @@ function moveToPartAccess(atProgramEnd) {
   var wasTCP = state.tcpIsActive;
   onCommand(COMMAND_COOLANT_OFF);
   writeRetract(Z);
-  disableLengthCompensation(true);
+  cancelLengthCompensation(true);
   cancelWorkPlane(true);
   var modeBWasOn = smoothing.isActive && smoothing.activeMode == "tcp5axis"; // setSmoothing(false) writes M289 for this case
   var needModeBOff = wasTCP || smoothing.tcpInLinkMove || smoothing.commandMode == "tcp5axis";
@@ -761,7 +764,7 @@ function onSection() {
       onCommand(COMMAND_COOLANT_OFF); // turn off coolant before home retract when entering or leaving TCP; next section will reissue coolant as needed
     }
     writeRetract(Z); // retract
-    disableLengthCompensation();
+    cancelLengthCompensation();
     if (isFirstSection()) {
       cancelWorkPlane(machineConfiguration.isMultiAxisConfiguration() && settings.workPlaneMethod.useTiltedWorkplane);
       if (machineConfiguration.isMultiAxisConfiguration()) {
@@ -791,7 +794,9 @@ function onSection() {
     currentWorkOffset = undefined; // force work offset when changing tool
     wcsIsRequired = newWorkOffset || insertToolCall;
   }
+  deferWcsActivation = insertToolCall; // EXP: simulation WCS activation waits for the tool change
   writeWCS(currentSection, wcsIsRequired);
+  deferWcsActivation = false;
 
   if (insertToolCall) {
     if (tool.manualToolChange) {
@@ -813,6 +818,7 @@ function onSection() {
       startSpindle(tool, insertToolCall);
     }
   }
+  flushWcsActivation(); // EXP: safety - never leave a WCS activation pending past the tool call
   // write parametric feedrate table
   if (typeof initializeParametricFeeds == "function") {
     initializeParametricFeeds(insertToolCall);
@@ -959,14 +965,15 @@ function protectedProbeMove(_cycle, x, y, z) {
   var _y = yOutput.format(y);
   var _z = zOutput.format(z);
   var _code = getProperty("probingType") == "Renishaw" ? 8810 : 8703;
+  var feedrate = getParameter("operation:tool_feedProbeLink", _cycle.feedrate);
   if (_z && z >= getCurrentPosition().z) {
-    writeBlock(gFormat.format(65), "P" + _code, _z, getFeed(cycle.feedrate)); // protected positioning move
+    writeBlock(gFormat.format(65), "P" + _code, _z, getFeed(feedrate)); // protected positioning move
   }
   if (_x || _y) {
-    writeBlock(gFormat.format(65), "P" + _code, _x, _y, getFeed(highFeedrate)); // protected positioning move
+    writeBlock(gFormat.format(65), "P" + _code, _x, _y, getFeed(feedrate)); // protected positioning move
   }
   if (_z && z < getCurrentPosition().z) {
-    writeBlock(gFormat.format(65), "P" + _code, _z, getFeed(cycle.feedrate)); // protected positioning move
+    writeBlock(gFormat.format(65), "P" + _code, _z, getFeed(feedrate)); // protected positioning move
   }
 }
 
@@ -1151,7 +1158,7 @@ function writeDrillCycle(cycle, x, y, z) {
       var dz = (gPlaneModal.getCurrent() == 17) ? cycle.backBoreDistance : 0;
       writeBlock(
         gRetractModal.format(98), gCycleModal.format(87),
-        getCommonCycle(x, y, cycle.bottom - cycle.backBoreDistance, cycle.bottom),
+        getCommonCycle(x, y, z + dz, cycle.bottom),
         "Q" + xyzFormat.format(cycle.shift),
         "P" + secFormat.format(P), // not optional
         cyclefeedOutput.format(F)
@@ -1898,13 +1905,14 @@ function onCommand(command) {
         // TWP FORK: bare G100 bypasses writeToolBlock, so machine simulation never saw the tool change
         // ("Tool-change instruction missing" / "Connection without a tool"). Simulation-only - NC output unchanged.
         machineSimulation({mode:TOOLCHANGE});
+        flushWcsActivation(); // EXP: WCS activation after the tool change
       }
     } else {
       writeToolBlock(gFormat.format(100),
         "T" + toolFormat.format(tool.number),
         xOutput.format(start.x),
         yOutput.format(start.y),
-        getOffsetCode(),
+        getLengthCompCode(),
         zOutput.format(start.z),
         abc ? aOutput.format(abc.x) : undefined,
         abc ? bOutput.format(abc.y) : undefined,
@@ -1973,7 +1981,7 @@ function onCommand(command) {
   case COMMAND_BREAK_CONTROL:
     onCommand(COMMAND_COOLANT_OFF);
     writeRetract(Z); // outputs G28 G91 Z0 + G90 with current retract settings
-    disableLengthCompensation(true); // force G49 output
+    cancelLengthCompensation(true); // force G49 output
     cancelWorkPlane(true); // force G69 output
     smoothing.force = true;
     setSmoothing(false); // force smoothing-off code (M289 in mode B)
@@ -2017,7 +2025,7 @@ function onSectionEnd() {
   // Output G43 before retract when transitioning from non-TCP to TCP on same tool to prevent SM4124 alarm
   if (!isLastSection() && !state.tcpIsActive && isTCPSupportedByOperation(getNextSection()) && 
       !isToolChangeNeeded(getNextSection(), getProperty("toolAsName") ? "description" : "number")) {
-    writeBlock(toolLengthCompOutput.format(43)); // standard comp before retract
+    writeBlock(lengthCompOutput.format(43)); // standard comp before retract
   }
 
   if (tool.type != TOOL_PROBE && getProperty("washdownCoolant") == "operationEnd") {
@@ -2050,7 +2058,7 @@ function onSectionEnd() {
         // frame - retract, cancel G43 then G69, then write via O8732 (W1.=work
         // offset mode, Z1. enables the Z component write)
         writeRetract(Z);
-        disableLengthCompensation(true);
+        cancelLengthCompensation(true);
         cancelWorkPlane(true);
         writeComment("TWP WCS UPDATE - OFFSET WRITE");
         writeBlock(settings.probing.macroCall, "P" + 8732, twpWcsUpdate.sCode, "W1.", "Z1.");
@@ -2081,8 +2089,8 @@ function writeRetract() {
     if (typeof cancelWCSRotation == "function" && getSetting("retract.cancelRotationOnRetracting", false)) { // cancel rotation before retracting
       cancelWCSRotation();
     }
-    if (typeof disableLengthCompensation == "function" && getSetting("allowCancelTCPBeforeRetracting", false) && state.tcpIsActive) {
-      disableLengthCompensation(); // cancel TCP before retracting
+    if (typeof cancelLengthCompensation == "function" && getSetting("allowCancelTCPBeforeRetracting", false) && state.tcpIsActive) {
+      cancelLengthCompensation(); // cancel TCP before retracting
     }
     if (retract.retractAxes[2] && state.tcpIsActive) {
       writeBlock(gFormat.format(100), "T" + toolFormat.format(currentToolNumber));
@@ -2095,6 +2103,7 @@ function writeRetract() {
         forceCoolant = true;
       }
       machineSimulation({mode:RETRACTTOOLAXIS});
+      forceSpindleSpeed = true; // force spindle speed for next section if G100 is used since it will stop the spindle.
       return;
     }
     for (var i in retract.words) {
@@ -2138,7 +2147,7 @@ function onClose() {
     isDPRNTopen = false;
   }
   writeRetract(Z); // retract
-  disableLengthCompensation(true);
+  cancelLengthCompensation(true);
 
   if (probeVariables.probeAngleMethod == "G68") {
     cancelWCSRotation();
@@ -2510,6 +2519,7 @@ function writeToolBlock() {
   writeBlock(arguments);
   setProperty("showSequenceNumbers", show);
   machineSimulation({/*x:toPreciseUnit(200, MM), y:toPreciseUnit(200, MM), coordinates:MACHINE,*/ mode:TOOLCHANGE}); // move machineSimulation to a tool change position
+  flushWcsActivation(); // EXP: WCS activation after the tool change
 }
 
 var skipBlocks = false;
@@ -2714,6 +2724,8 @@ var WORK = "WORK CS";
 var MACHINE = "MACHINE CS";
 var MIN = "MIN";
 var MAX = "MAX";
+var SHORTEST = "SHORTEST";
+var PROGRAMMED = "PROGRAMMED";
 var WARNING_NON_RANGE = [0, 1, 2];
 var isTwpOn;
 var isTcpOn;
@@ -2731,9 +2743,11 @@ var isTcpOn;
  * @param {String} mode mode TCPON | TCPOFF | TWPON | TWPOFF | TOOLCHANGE | RETRACTTOOLAXIS
  * @param {String} coordinates WORK | MACHINE - if undefined, work coordinates will be used by default
  * @param {Number} eulerAngles the calculated Euler angles for the workplane
+ * @param {String} rotaryMode SHORTEST | PROGRAMMED - if undefined, the default rotary mode will be used
  * @example
   machineSimulation({a:abc.x, b:abc.y, c:abc.z, coordinates:MACHINE});
   machineSimulation({x:toPreciseUnit(200, MM), y:toPreciseUnit(200, MM), coordinates:MACHINE, mode:TOOLCHANGE});
+  machineSimulation({a:abc.x, b:abc.y, c:abc.z, coordinates:MACHINE, rotaryMode:SHORTEST});
 */
 function machineSimulation(parameters) {
   if (revision < 50198 || skipBlocks || (getSimulationStreamPath() == "" && !debugSimulation)) {
@@ -2760,6 +2774,7 @@ function machineSimulation(parameters) {
   var c = (isNaN(parameters.c) && parameters.c) ? error(rotaryAxesErrorMessage) : parameters.c;
   var coordinates = parameters.coordinates;
   var eulerAngles = parameters.eulerAngles;
+  var rotaryMode = parameters.rotaryMode;
   var feed = parameters.feed;
   if (feed === undefined && typeof gMotionModal !== "undefined") {
     feed = gMotionModal.getCurrent() !== 0;
@@ -2768,6 +2783,9 @@ function machineSimulation(parameters) {
   var performToolChange = mode == TOOLCHANGE;
   if (mode !== undefined && ![TCPON, TCPOFF, TWPON, TWPOFF, TOOLCHANGE, RETRACTTOOLAXIS].includes(mode)) {
     error(subst("Mode '%1' is not supported.", mode));
+  }
+  if (rotaryMode !== undefined && ![SHORTEST, PROGRAMMED].includes(rotaryMode)) {
+    error(subst(localize("Rotary mode '%1' is not supported."), rotaryMode));
   }
 
   // mode takes precedence over TCP/TWP states
@@ -2827,10 +2845,28 @@ function machineSimulation(parameters) {
       simulation.setMotionToRapid();
     }
 
+    var supportsRotaryMode = rotaryMode !== undefined && revision >= 50338;
+    var saveRotaryDirection = supportsRotaryMode ? simulation.getRotaryDirection() : undefined;
+    if (supportsRotaryMode) {
+      if (rotaryMode === SHORTEST) {
+        simulation.setRotaryToGoShortestDirection();
+      } else if (rotaryMode === PROGRAMMED) {
+        simulation.setRotaryToGoProgrammedDirection();
+      }
+    }
+
     if (coordinates != undefined && coordinates == MACHINE) {
       simulation.moveToTargetInMachineCoords();
     } else {
       simulation.moveToTargetInWorkCoords();
+    }
+
+    if (supportsRotaryMode) {
+      if (saveRotaryDirection === ROTARY_DIRECTION_AS_PROGRAMMED) {
+        simulation.setRotaryToGoProgrammedDirection();
+      } else {
+        simulation.setRotaryToGoShortestDirection();
+      }
     }
   }
   if (performToolChange) {
@@ -2947,6 +2983,15 @@ function positionABC(abc, force) {
   }
 }
 // <<<<< INCLUDED FROM include_files/positionABC.cpi
+// EXP: deferred simulation WCS activation (see writeWCS)
+var deferWcsActivation = false;
+var pendingWcsActivation = false;
+function flushWcsActivation() {
+  if (pendingWcsActivation) {
+    pendingWcsActivation = false;
+    simulation.activateWorkCoordsForNextOperation();
+  }
+}
 // >>>>> INCLUDED FROM include_files/writeWCS.cpi
 function writeWCS(section, wcsIsRequired) {
   if (section.workOffset != currentWorkOffset) {
@@ -2960,6 +3005,17 @@ function writeWCS(section, wcsIsRequired) {
       writeBlock(section.wcs);
     });
     currentWorkOffset = section.workOffset;
+    // EXP X0929C: 44242 simulation WCS activation DISABLED - it broke Fusion's machine simulation / NC program
+    // time on this post (tool change after activation, then missing machining time). Kept for reference.
+    if (false && revision >= 50338 && getCurrentSectionId() > 0 && section.workOffset != getPreviousSection().workOffset) {
+      // EXP: the D-00 order is WCS then G100 tool change; Fusion's simulation rejects a tool change
+      // after a WCS activation in the same connection - defer the activation until after the tool change
+      if (deferWcsActivation) {
+        pendingWcsActivation = true;
+      } else {
+        simulation.activateWorkCoordsForNextOperation();
+      }
+    }
   }
 }
 // <<<<< INCLUDED FROM include_files/writeWCS.cpi
@@ -2980,9 +3036,6 @@ function writeToolCall(tool, insertToolCall) {
         forceWorkPlane();
       }
       onCommand(COMMAND_COOLANT_OFF); // turn off coolant on tool change
-      if (typeof disableLengthCompensation == "function") {
-        disableLengthCompensation(false);
-      }
     }
 
     if (tool.manualToolChange) {
@@ -3798,11 +3851,11 @@ function cancelWorkPlane(force) {
     if (command) {
       // TWP FORK: the D-00 alarms (SM4106 Feature coordinate command error) if G69 is
       // commanded while tool length compensation is still active - cancel G43 first
-      if (state.lengthCompensationActive && typeof disableLengthCompensation == "function") {
+      if (state.lengthCompensationActive && typeof cancelLengthCompensation == "function") {
         if (!state.retractedZ) {
           writeRetract(Z);
         }
-        disableLengthCompensation(true);
+        cancelLengthCompensation(true);
       }
       writeBlock(command); // cancel frame
       forceWorkPlane();
@@ -3824,8 +3877,8 @@ function setWorkPlane(abc) {
     if (getSetting("retract.homeXY.onIndexing", false)) {
       writeRetract(settings.retract.homeXY.onIndexing);
     }
-    if ((state.lengthCompensationActive || state.tcpIsActive) && typeof disableLengthCompensation == "function") {
-      disableLengthCompensation(); // cancel tool lenght compensation / TCP prior to output TWP
+    if (typeof cancelLengthCompensation == "function") {
+      cancelLengthCompensation(); // cancel tool lenght compensation / TCP prior to output TWP
     }
     if (settings.workPlaneMethod.useTiltedWorkplane) {
       onCommand(COMMAND_UNLOCK_MULTI_AXIS);
@@ -3886,8 +3939,8 @@ function writeInitialPositioning(position, isRequired, codes1, codes2) {
   forceModals(gMotionModal);
   writeStartBlocks(isRequired, function() {
     var modalCodes = formatWords(gAbsIncModal.format(90), gPlaneModal.format(17));
-    if (typeof disableLengthCompensation == "function") {
-      disableLengthCompensation(!isRequired); // cancel tool length compensation prior to enabling it, required when switching G43/G43.4 modes
+    if (typeof cancelLengthCompensation == "function") {
+      cancelLengthCompensation(!isRequired); // cancel tool length compensation prior to enabling it, required when switching G43/G43.4 modes
     }
 
     if (machineConfiguration.isHeadConfiguration()) { // head/head head/table kinematics
@@ -3903,19 +3956,19 @@ function writeInitialPositioning(position, isRequired, codes1, codes2) {
       cancelWorkPlane();
       positionABC(machineABC);
       if ((getSetting("workPlaneMethod.useTiltedWorkplane", false) && tcp.isSupportedByMachine && getCurrentDirection().isNonZero()) || tcp.isSupportedByOperation) {
-        writeBlock(getOffsetCode(true), hOffset); // force TCP for prepositioning although the operation may not require it
+        setTCP(true, true); // force TCP for prepositioning although the operation may not require it
       }
       writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(prePosition.x), yOutput.format(prePosition.y), feed, additionalCodes[0]);
       machineSimulation({x:prePosition.x, y:prePosition.y});
       if (currentSection.isMultiAxis() || getSetting("headPositioningMethod", 0) == 1) {
-        var lengthComp = state.lengthCompensationActive ? {code:undefined, hOffset:undefined} : {code:getOffsetCode(), hOffset:hOffset};
+        var lengthComp = state.lengthCompensationActive ? {code:undefined, hOffset:undefined} : {code:getLengthCompCode(), hOffset:hOffset};
         writeBlock(modalCodes, gMotionModal.format(motionCode.single), lengthComp.code, zOutput.format(prePosition.z), lengthComp.hOffset, additionalCodes[1]);
         machineSimulation({z:prePosition.z});
       }
 
       if (!currentSection.isMultiAxis()) {
-        if (state.tcpIsActive && !tcp.isSupportedByOperation && typeof disableLengthCompensation == "function") {
-          disableLengthCompensation();
+        if (state.tcpIsActive && !tcp.isSupportedByOperation && typeof setTCP == "function") {
+          setTCP(false);
         }
         if (getSetting("workPlaneMethod.useTiltedWorkplane", false) && getCurrentDirection().isNonZero()) {
           var saveRetractedState = [state.retractedX, state.retractedY, state.retractedZ];
@@ -3930,10 +3983,10 @@ function writeInitialPositioning(position, isRequired, codes1, codes2) {
           if (getSetting("headPositioningMethod", 0) == 1) {
             writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(position.x), yOutput.format(position.y));
             machineSimulation({x:position.x, y:position.y});
-            writeBlock(modalCodes, gMotionModal.format(motionCode.single), getOffsetCode(), zOutput.format(position.z), hOffset);
+            writeBlock(modalCodes, gMotionModal.format(motionCode.single), getLengthCompCode(), zOutput.format(position.z), hOffset);
             machineSimulation({z:position.z});
           } else {
-            writeBlock(modalCodes, getOffsetCode(), gMotionModal.format(motionCode.single), xOutput.format(position.x), yOutput.format(position.y), zOutput.format(position.z), hOffset);
+            writeBlock(modalCodes, getLengthCompCode(), gMotionModal.format(motionCode.single), xOutput.format(position.x), yOutput.format(position.y), zOutput.format(position.z), hOffset);
             machineSimulation({x:position.x, y:position.y, z:position.z});
           }
         }
@@ -3948,16 +4001,16 @@ function writeInitialPositioning(position, isRequired, codes1, codes2) {
         var prePosition = W.getTransposed().multiply(position);
         var angles = W.getEuler2(settings.workPlaneMethod.eulerConvention);
         setWorkPlane(angles);
-        writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(prePosition.x), yOutput.format(prePosition.y), feed, additionalCodes[0]);
+        writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(prePosition.x), yOutput.format(prePosition.y), feed, additionalCodes);
         machineSimulation({x:prePosition.x, y:prePosition.y});
         if (pendingTCPCoolant) { setCoolant(tool.coolant); pendingTCPCoolant = false; } // emit coolant just before G69
         cancelWorkPlane();
-        writeBlock(modalCodes, gMotionModal.format(motionCode.single), getOffsetCode(), xOutput.format(position.x), yOutput.format(position.y), zOutput.format(position.z), hOffset, additionalCodes[1]);
+        writeBlock(modalCodes, gMotionModal.format(motionCode.single), getLengthCompCode(), xOutput.format(position.x), yOutput.format(position.y), zOutput.format(position.z), hOffset, additionalCodes[1]);
         machineSimulation({x:position.x, y:position.y, z:position.z});
       } else {
         writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(position.x), yOutput.format(position.y), feed, additionalCodes[0]);
         machineSimulation({x:position.x, y:position.y});
-        writeBlock(gMotionModal.format(motionCode.single), getOffsetCode(), zOutput.format(position.z), hOffset, additionalCodes[1]);
+        writeBlock(gMotionModal.format(motionCode.single), getLengthCompCode(), zOutput.format(position.z), hOffset, additionalCodes[1]);
         machineSimulation(tcp.isSupportedByOperation ? {x:position.x, y:position.y, z:position.z} : {z:position.z});
       }
     }
@@ -3997,51 +4050,65 @@ Matrix.getOrientationFromDirection = function (ijk) {
   return W;
 };
 // <<<<< INCLUDED FROM include_files/initialPositioning_fanuc.cpi
-// >>>>> INCLUDED FROM include_files/getOffsetCode_fanuc.cpi
-var toolLengthCompOutput = createOutputVariable({control : CONTROL_FORCE,
+// >>>>> INCLUDED FROM include_files/lengthCompFunctions_fanuc.cpi
+if (typeof lengthCompCodes === "undefined") {
+  var lengthCompCodes = {tool:43, tcp:43.4, tcpVector:43.5, cancel:49};
+}
+var lengthCompOutput = createOutputVariable({control : CONTROL_FORCE,
   onchange: function() {
-    state.tcpIsActive = toolLengthCompOutput.getCurrent() == 43.4 || toolLengthCompOutput.getCurrent() == 43.5;
-    state.lengthCompensationActive = toolLengthCompOutput.getCurrent() != 49;
+    state.tcpIsActive = lengthCompOutput.getCurrent() == lengthCompCodes.tcp || lengthCompOutput.getCurrent() == lengthCompCodes.tcpVector;
+    state.lengthCompensationActive = lengthCompOutput.getCurrent() != lengthCompCodes.cancel;
     machineSimulation({}); // update machine simulation TCP state
   }
 }, gFormat);
 
-function getOffsetCode(forceTCP) {
-  if (!getSetting("outputToolLengthCompensation", true) && toolLengthCompOutput.isEnabled()) {
+function getLengthCompCode(forceTCP) {
+  if (!getSetting("outputToolLengthCompensation", true) && lengthCompOutput.isEnabled()) {
     state.lengthCompensationActive = true; // always assume that length compensation is active
-    toolLengthCompOutput.disable();
+    lengthCompOutput.disable();
   }
-  var offsetCode = 43;
+  var lengthCompCode = lengthCompCodes.tool;
   if (tcp.isSupportedByOperation || forceTCP) {
-    offsetCode = machineConfiguration.isMultiAxisConfiguration() ? 43.4 : 43.5;
+    lengthCompCode = machineConfiguration.isMultiAxisConfiguration() ? lengthCompCodes.tcp : lengthCompCodes.tcpVector;
   }
-  return toolLengthCompOutput.format(offsetCode);
+  return lengthCompOutput.format(lengthCompCode);
 }
-// <<<<< INCLUDED FROM include_files/getOffsetCode_fanuc.cpi
-// >>>>> INCLUDED FROM include_files/disableLengthCompensation_fanuc.cpi
-function disableLengthCompensation(force) {
+
+function setTCP(_tcp, force) {
+  if (!force && state.tcpIsActive === _tcp) {
+    return;
+  }
+  cancelLengthCompensation();
+  if (_tcp) {
+    var hOffset = getSetting("outputToolLengthOffset", true) ? hFormat.format(tool.lengthOffset) : "";
+    writeBlock(getLengthCompCode(force), hOffset);
+    forceXYZ();
+  }
+}
+// <<<<< INCLUDED FROM include_files/lengthCompFunctions_fanuc.cpi
+// >>>>> INCLUDED FROM include_files/cancelLengthCompensation_fanuc.cpi
+function cancelLengthCompensation(force) {
+  if (!lengthCompCodes.cancel) {
+    return;
+  }
   if (state.lengthCompensationActive || force) {
     if (force) {
-      toolLengthCompOutput.reset();
+      lengthCompOutput.reset();
     }
     if (!getSetting("allowCancelTCPBeforeRetracting", false)) {
       validate(state.retractedZ, "Cannot cancel tool length compensation if the machine is not fully retracted.");
     }
-    writeBlock(toolLengthCompOutput.format(49));
+    writeBlock(lengthCompOutput.format(lengthCompCodes.cancel));
   }
 }
-// <<<<< INCLUDED FROM include_files/disableLengthCompensation_fanuc.cpi
+// <<<<< INCLUDED FROM include_files/cancelLengthCompensation_fanuc.cpi
 // >>>>> INCLUDED FROM include_files/rewind.cpi
 function onMoveToSafeRetractPosition() {
   if (!getSetting("allowCancelTCPBeforeRetracting", false)) {
     writeRetract(Z);
   }
   if (state.tcpIsActive) { // cancel TCP so that tool doesn't follow rotaries
-    if (typeof setTCP == "function") {
-      setTCP(false);
-    } else {
-      disableLengthCompensation(false);
-    }
+    setTCP(false);
   }
   suspendSmoothingForRewind(); // TWP FORK: M289 before the rotary index (SM4039.004)
   writeRetract(Z);
@@ -4082,11 +4149,7 @@ function onReturnFromSafeRetractPosition(_x, _y, _z) {
     machineSimulation({x:_x, y:_y, z:_z, a:getCurrentDirection().x, b:getCurrentDirection().y, c:getCurrentDirection().z});
   } else {
     if (tcp.isSupportedByOperation) {
-      if (typeof setTCP == "function") {
-        setTCP(true);
-      } else {
-        writeBlock(getOffsetCode(), hFormat.format(tool.lengthOffset));
-      }
+      setTCP(true);
     }
     restoreSmoothingAfterRewind(); // TWP FORK: after TCP re-enable
     forceXYZ();

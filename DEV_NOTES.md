@@ -1,5 +1,28 @@
 # Developer Notes
 
+Date: 2026-09-25
+
+Release tag (suggested): `v2026.09.25-rewind-fix` - post tag `R0925D`
+
+## Post: brother speedio U500XD1 2026 TWP FINAL.cps
+All changes marked `// TWP FORK:`. New functions: `suspendSmoothingForRewind()`, `restoreSmoothingAfterRewind()`, `restartSpindleAfterRewind()`, `moveToPartAccess()`; new state `smoothing.rewindSuspended`, global `inSection`; new properties `partAccess*`. Full writeup with manual citations: `Claude Workspace\RGT\Machines\Brother U500XD1\vault\Post Fixes 2026-09-25.md`.
+
+## Rules learned (D-00)
+- M280-M287 are high-accuracy mode B and survive G49. Any non-TCP G01/G02 moving two rotaries needs M289 first (SM4039.004), or use G00.
+- G100 stops the spindle. Any path that uses the TCP retract `G100 T__` must restart S/M03 (+coolant) before the next cut.
+- Fusion's machine simulation only sees a tool change through `writeToolBlock()` / `machineSimulation({mode:TOOLCHANGE})`.
+
+## Machine-side / Fusion
+- Machine definition reviewed vs IM 2.4 - A preference Positive, rapids filled in, retract/plunge 100/30 ipm, tool change 2 s. See vault `Machine Definition U500Xd1.md`.
+- A travel is -30..+120 (not +/-90).
+
+## Validation
+- O1520 vs O1521: diff = rewind block only (M289 / G00 index / S M03 / M08 / M284) + name tag. O1521 run on machine through the rewind 2026-09-25.
+- NC checker `NC code P8000 Check` 0.0.4 flags the O1520 SM4039 line and nothing in O1521.
+
+---
+
+
 Date: 2026-07-30
 
 Release tag: `v2026.07.30-twp-final`

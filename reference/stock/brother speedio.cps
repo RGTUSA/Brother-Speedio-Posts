@@ -10,15 +10,14 @@
   FORKID {C09133CD-6F13-4DFC-9EB8-41260FBB5B08}
 */
 
-description = "Brother Speedio U500XD1 2026 TWP FINAL R1001";
-var postRevTag = "R1001"; // TWP FORK: post revision tag - appended to the program name line to prove which post copy generated the file
+description = "Brother Speedio";
 vendor = "Brother";
 vendorUrl = "http://www.brother.com";
 legal = "Copyright (C) 2012-2026 by Autodesk, Inc.";
 certificationLevel = 2;
 minimumRevision = 45917;
 
-longDescription = "RGT fork of the U500XD1 2026 post with tilted-work-plane (G68.2) WCS probing support for the Renishaw Inspection Plus suite on the D-00 control. Under an active G68.2, probe cycles with a WCS override post as geometry-only (errors bank in #151/#152/#153); the section end emits G65 P8744 (FCS-to-WCS conversion, in-frame) then G49/G69 and G65 P8732 (offset write, out-of-frame) because the D-00 blocks work offset writes while feature coordinate manufacturing mode is engaged (SM4107). Also enforces G49 before every G69 (SM4106). Flat (non-TWP) probing posts identically to the parent post. Angular/plane-angle WCS probing under TWP is not supported by this scheme.";
+longDescription = "Generic milling post for use with all common Brother Speedio mills like S, W, R, U, F and H series machines.";
 
 extension = "NC";
 programNameIsInteger = false;
@@ -47,7 +46,7 @@ properties = {
     description: "Preloads the next tool at a tool change (if any).",
     group      : "preferences",
     type       : "boolean",
-    value      : false,
+    value      : true,
     scope      : "post"
   },
   showSequenceNumbers: {
@@ -60,7 +59,7 @@ properties = {
       {title:"No", id:"false"},
       {title:"Only on tool change", id:"toolChange"}
     ],
-    value: "false",
+    value: "true",
     scope: "post"
   },
   sequenceNumberStart: {
@@ -77,46 +76,6 @@ properties = {
     group      : "formats",
     type       : "integer",
     value      : 5,
-    scope      : "post"
-  },
-  partAccessOnStop: {
-    title      : "Part access: move table on M00",
-    description: "TWP FORK: at a Manual NC Stop (M00) between operations - coolant off, spindle stop, retract Z, cancel G43/G43.4 + G68.2 + smoothing, then G53 rapid to the part-access X/Y below before the M00. The next operation re-establishes everything.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
-    scope      : "post"
-  },
-  partAccessOnProgramEnd: {
-    title      : "Part access: move table at program end",
-    description: "TWP FORK: at program end, G53 rapid to the part-access X/Y below instead of machine X0 Y0.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
-    scope      : "post"
-  },
-  partAccessX: {
-    title      : "Part access X (machine coord)",
-    description: "TWP FORK: G53 MACHINE coordinate X for the table part-access position (front/center of the door), in program units. Jog there on the pendant and read the MACHINE position. 0 = machine home.",
-    group      : "preferences",
-    type       : "number",
-    value      : -11.75,
-    scope      : "post"
-  },
-  partAccessY: {
-    title      : "Part access Y (machine coord)",
-    description: "TWP FORK: G53 MACHINE coordinate Y for the table part-access position (front/center of the door), in program units. 0 = machine home.",
-    group      : "preferences",
-    type       : "number",
-    value      : 0,
-    scope      : "post"
-  },
-  partAccessLevelTable: {
-    title      : "Part access: level table (A0 C0) on M00",
-    description: "TWP FORK: rotate to A0 C0 at Z home BEFORE the X/Y move at an M00 part-access stop (same order as the O8000 break-check macro: G28 Z, G28 A, then XY). Program end always levels first.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
     scope      : "post"
   },
   optionalStop: {
@@ -190,7 +149,7 @@ properties = {
       {title:"End of operation", id:"operationEnd"},
       {title:"Program end", id:"programEnd"}
     ],
-    value: "always",
+    value: "off",
     scope: "post"
   },
   usePitchForTapping: {
@@ -206,7 +165,7 @@ properties = {
     description: "If enabled, an L value containing double the spindle speed (up to 6000) will be output in the G77 tapping cycle.",
     group      : "preferences",
     type       : "boolean",
-    value      : true,
+    value      : false,
     scope      : "post"
   },
   useClampCodes: {
@@ -227,7 +186,7 @@ properties = {
       {title:"B", id:"B"},
       {title:"M298", id:"M298"}
     ],
-    value: "M298"
+    value: "A"
   },
   useSmoothing: {
     title      : "High accuracy level",
@@ -244,43 +203,7 @@ properties = {
       {title:"Finishing", id:"4"}, // 1
       {title:"Finishing high", id:"5"} // 2
     ],
-    value: "9999"
-  },
-  fiveAxisSmoothing: {
-    title      : "5-Axis TCP smoothing",
-    description: "Select the smoothing mode to use for simultaneous 5-axis TCP toolpaths.",
-    group      : "preferences",
-    type       : "enum",
-    values     : [
-      {title:"Off", id:"-1"},
-      {title:"Automatic", id:"9999"},
-      {title:"M280 - Standard/General Use", id:"280"},
-      {title:"M281 - Very Accurate Path Accuracy / Limited Smoothing", id:"281"},
-      {title:"M282 - Very High Path Accuracy / More Smoothing", id:"282"},
-      {title:"M283 - Highest Path Accuracy / Limited Smoothing", id:"283"},
-      {title:"M284 - Roughing/Transition Paths", id:"284"},
-      {title:"M285 - Custom (Deburr Cutting)", id:"285"}
-    ],
-    value: "285"
-  },
-  fiveAxisLinkSmoothing: {
-    title      : "5-Axis TCP link move smoothing",
-    description: "Select the smoothing state used during simultaneous 5-axis TCP linking moves before returning to the section smoothing mode.",
-    group      : "preferences",
-    type       : "enum",
-    values     : [
-      {title:"Off", id:"-1"},
-      {title:"M284 - Roughing/Transition Paths", id:"284"}
-    ],
-    value: "284"
-  },
-  showSmoothingAnnotations: {
-    title      : "Show smoothing annotations",
-    description: "Outputs comments describing smoothing mode changes in the NC code.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
-    scope      : "post"
+    value: "-1"
   },
   useMachiningLoadMonitor: {
     title      : "Machining Load Monitor",
@@ -321,7 +244,7 @@ properties = {
     description: "Enable to use G68.2 for 3+2 operations.",
     group      : "multiAxis",
     type       : "boolean",
-    value      : true,
+    value      : false,
     scope      : "machine"
   },
   singleResultsFile: {
@@ -413,10 +336,6 @@ var settings = {
     semi                  : 3, // semi-roughing level for smoothing in automatic mode
     semifinishing         : 4, // semi-finishing level for smoothing in automatic mode
     finishing             : 5, // finishing level for smoothing in automatic mode
-    roughingTcp           : 284, // roughing level for simultaneous 5-axis TCP smoothing in automatic mode
-    semiTcp               : 283, // semi-roughing level for simultaneous 5-axis TCP smoothing in automatic mode
-    semifinishingTcp      : 282, // semi-finishing level for simultaneous 5-axis TCP smoothing in automatic mode
-    finishingTcp          : 281, // finishing level for simultaneous 5-axis TCP smoothing in automatic mode
     thresholdRoughing     : toPreciseUnit(0.5, MM), // operations with stock/tolerance above that threshold will use roughing level in automatic mode
     thresholdFinishing    : toPreciseUnit(0.05, MM), // operations with stock/tolerance below that threshold will use finishing level in automatic mode
     thresholdSemiFinishing: toPreciseUnit(0.1, MM), // operations with stock/tolerance above finishing and below threshold roughing that threshold will use semi finishing level in automatic mode
@@ -578,7 +497,7 @@ function onOpen() {
   sixthAxisClamp.format(445); // Default 6th axis modal code to be clamped
 
   if (programName) {
-    writeComment(programName + conditional(programComment, SP + formatComment(programComment)) + SP + postRevTag); // TWP FORK: rev tag on the name line
+    writeComment(programName + conditional(programComment, SP + formatComment(programComment)));
   } else {
     error(localize("Program name has not been specified."));
   }
@@ -604,161 +523,43 @@ function setSmoothing(mode) {
     validate(!state.lengthCompensationActive, "Length compensation is active while trying to update smoothing.");
   }
 
-  var commandMode = smoothing.commandMode;
-  if (mode && smoothing.isActive && smoothing.activeMode != commandMode) {
-    outputSmoothingCommand(false, smoothing.activeMode, smoothing.level);
-    smoothing.isActive = false;
-    smoothing.activeMode = undefined;
+  // for smoothingModes A and B mapping is required for smoothing level value
+  var propertyBaseLevel = parseInt(getProperty("useSmoothing"), 10);
+  propertyBaseLevel = isNaN(propertyBaseLevel) ? -1 : propertyBaseLevel;
+  var mappedLevel = (propertyBaseLevel >= 0 && propertyBaseLevel <= 5) ? [0, 5, 3, 4, 1, 2][propertyBaseLevel] : smoothing.level;
+  switch (getProperty("smoothingMode")) {
+  case "A":
+    writeBlock(mFormat.format(mode ? 260 + mappedLevel : 269));
+    break;
+  case "B":
+    writeBlock(mFormat.format(mode ? 280 + mappedLevel : 289));
+    break;
+  default:
+    writeBlock(mFormat.format(298), mode ? "L" + smoothing.level : "L0");
+    break;
   }
-
-  outputSmoothingCommand(mode, (!mode && commandMode == "off") ? commandMode : (mode ? commandMode : (smoothing.activeMode || commandMode)), smoothing.level);
   smoothing.isActive = mode;
-  smoothing.activeMode = mode ? commandMode : undefined;
-  smoothing.tcpInLinkMove = mode ? smoothing.tcpInLinkMove : false;
   smoothing.force = false;
   smoothing.isDifferent = false;
-}
-
-function isTcpLinkMove() {
-  return (typeof movement != "undefined") && ((movement == MOVEMENT_LINK_TRANSITION) || (movement == MOVEMENT_LINK_DIRECT) || (movement == MOVEMENT_HIGH_FEED));
-}
-
-function manageTcpLinkSmoothing(isLinkMove) {
-  // TWP FORK: allow link smoothing even when section 5-axis smoothing is Off
-  // (cuts run M299, links swap to the tuned M284 level, M299 restored after)
-  if (smoothing.rewindSuspended) {
-    return; // TWP FORK: no M284/M285 swaps during a rewind - high-accuracy B must stay off (SM4039.004)
-  }
-  var linkCode = parseInt(getProperty("fiveAxisLinkSmoothing"), 10);
-  if (smoothing.commandMode != "tcp5axis" || (smoothing.level == -1 && linkCode == -1)) {
-    smoothing.tcpInLinkMove = false;
-    return;
-  }
-
-  if (isLinkMove && !smoothing.tcpInLinkMove) {
-    smoothing.tcpInLinkMove = true;
-    writeSmoothingBlock([mFormat.format(linkCode == 284 ? 284 : 289)], getSmoothingDescription("tcp5axis", linkCode == 284, linkCode == 284 ? 284 : -1));
-  } else if (!isLinkMove && smoothing.tcpInLinkMove) {
-    smoothing.tcpInLinkMove = false;
-    var restoreCode = smoothing.level == -1 ? 299 : smoothing.level;
-    writeSmoothingBlock([mFormat.format(restoreCode)], getSmoothingDescription("tcp5axis", smoothing.level != -1, smoothing.level));
-  }
-}
-
-// TWP FORK: rewind smoothing handling (2026-09-25, O1520 SM4039.004)
-// M280-M287 stay modal after G49 and become high-accuracy mode B (NC manual 14.2.6.5 NOTE 1).
-// Mode B + <High accuracy B additional axes>=Valid alarms SM4039.004 on a G01/G02 moving A and C
-// together (NC manual 14.1.6). Cancel with M289 for the rewind, restore the exact prior state after G43.4.
-function suspendSmoothingForRewind() {
-  if (smoothing.rewindSuspended) {
-    return;
-  }
-  if (smoothing.tcpInLinkMove || (smoothing.isActive && smoothing.activeMode == "tcp5axis")) {
-    writeSmoothingBlock([mFormat.format(289)], getSmoothingDescription("tcp5axis", false, -1));
-  } else if (smoothing.isActive) {
-    outputSmoothingCommand(false, smoothing.activeMode, smoothing.level);
-  }
-  smoothing.rewindSuspended = true; // smoothing state vars are left as-is so the restore is exact
-}
-
-// TWP FORK: part access position (2026-09-25). Same safe-state sequence as the machine-proven
-// break-control block (coolant off, G28/G100 retract, G49 before G69, smoothing off, M05), then a
-// G53 rapid to the operator-set X/Y. State flags are updated by the called functions, so the next
-// operation re-outputs G68.2/G53.1, G43/G43.4 + H, spindle and coolant as normal.
-function moveToPartAccess(atProgramEnd) {
-  var wasTCP = state.tcpIsActive;
-  onCommand(COMMAND_COOLANT_OFF);
-  writeRetract(Z);
-  disableLengthCompensation(true);
-  cancelWorkPlane(true);
-  var modeBWasOn = smoothing.isActive && smoothing.activeMode == "tcp5axis"; // setSmoothing(false) writes M289 for this case
-  var needModeBOff = wasTCP || smoothing.tcpInLinkMove || smoothing.commandMode == "tcp5axis";
-  smoothing.force = true;
-  setSmoothing(false);
-  if (needModeBOff && !modeBWasOn) {
-    writeSmoothingBlock([mFormat.format(289)], getSmoothingDescription("tcp5axis", false, -1)); // mode B off before any A/C move
-  }
-  if (!atProgramEnd) {
-    onCommand(COMMAND_STOP_SPINDLE);
-  }
-  // level the table at Z home BEFORE moving X/Y (O8000 order: G28 Z, G28 A, then XY)
-  if ((atProgramEnd || getProperty("partAccessLevelTable")) && machineConfiguration.isMultiAxisConfiguration()) {
-    positionABC(new Vector(0, 0, 0), true);
-  }
-  writeComment("PART ACCESS POSITION");
-  forceModals(gMotionModal);
-  writeBlock(gAbsIncModal.format(90), gFormat.format(53), gMotionModal.format(0),
-    "X" + xyzFormat.format(getProperty("partAccessX")), "Y" + xyzFormat.format(getProperty("partAccessY")));
-  forceXYZ(); // next positioning must re-output X/Y
-  if (!atProgramEnd) {
-    forceABC(); // next operation must re-index A/C
-  }
-}
-
-// TWP FORK: rewind spindle/coolant restart (2026-09-25, O1521 - spindle stayed off after the rewind).
-// Under TCP the rewind retract is G100 T__ (writeRetract), which stops the spindle; writeRetract flags
-// forceSpindleSpeed/forceCoolant for a same-tool restart, but only onSection consumed them - the rewind
-// path never did. Restart here: after the rotary index, tool still at Z home, before G68.2/G43.4 re-entry.
-function restartSpindleAfterRewind() {
-  forceSpindleSpeed = true;
-  forceCoolant = true;
-  startSpindle(tool, false);
-  setCoolant(tool.coolant);
-}
-
-function restoreSmoothingAfterRewind() {
-  if (!smoothing.rewindSuspended) {
-    return;
-  }
-  smoothing.rewindSuspended = false;
-  if (smoothing.tcpInLinkMove) {
-    var linkCode = parseInt(getProperty("fiveAxisLinkSmoothing"), 10);
-    if (linkCode == 284) {
-      writeSmoothingBlock([mFormat.format(284)], getSmoothingDescription("tcp5axis", true, 284));
-    }
-  } else if (smoothing.isActive) {
-    outputSmoothingCommand(true, smoothing.activeMode, smoothing.level);
-  }
 }
 
 function printProbeResults() {
   return ((currentSection.getParameter("printResults", 0) == 1) && (getProperty("probingType") == "Renishaw"));
 }
 
-// TWP FORK: true from onSection until the end of onSectionEnd. Manual NC Stops arrive between
-// operations (inSection false); M00s the post itself writes mid-operation (manual tool change,
-// inspection commissioning mode) stay in place and do NOT move the table.
-var inSection = false;
-
 function onSection() {
-  inSection = true;
   var forceSectionRestart = optionalSection && !currentSection.isOptional();
   optionalSection = currentSection.isOptional();
-  var toolChange = isToolChangeNeeded("number");
-  var insertToolCall = toolChange || forceSectionRestart;
+  var insertToolCall = isToolChangeNeeded("number") || forceSectionRestart;
   var newWorkOffset = isNewWorkOffset() || forceSectionRestart;
   var newWorkPlane = isNewWorkPlane() || forceSectionRestart || (typeof defineWorkPlane == "function" &&
     Vector.diff(defineWorkPlane(getPreviousSection(), false), defineWorkPlane(currentSection, false)).length > 1e-4);
   initializeSmoothing(); // initialize smoothing mode
 
-  // Check if current section needs TCP (for same-tool transitions from non-TCP)
-  var currentSectionNeedsTCP = isTCPSupportedByOperation(currentSection) && !toolChange;
-  var sameToolTCPEntry = currentSectionNeedsTCP && !insertToolCall;
-  var sameToolAfterTCP = !insertToolCall && state.tcpIsActive;
-  var toolChangeTCPEntry = toolChange && isTCPSupportedByOperation(currentSection) &&
-    (currentSection.isMultiAxis() || currentSection.isOptimizedForMachine());
-
-  if (sameToolTCPEntry || sameToolAfterTCP) {
-    forceSpindleSpeed = true;
-    forceCoolant = true;
-  }
-
-  if (insertToolCall || newWorkOffset || newWorkPlane || smoothing.cancel || state.tcpIsActive || currentSection.isMultiAxis() || currentSectionNeedsTCP) {
+  if (insertToolCall || newWorkOffset || newWorkPlane || smoothing.cancel || state.tcpIsActive || currentSection.isMultiAxis()) {
     if (insertToolCall && !isFirstSection()) {
       onCommand(COMMAND_COOLANT_OFF); // turn off coolant before retract during tool change
       onCommand(COMMAND_STOP_SPINDLE); // stop spindle before retract during tool change
-    } else if (state.tcpIsActive || currentSectionNeedsTCP) {
-      onCommand(COMMAND_COOLANT_OFF); // turn off coolant before home retract when entering or leaving TCP; next section will reissue coolant as needed
     }
     writeRetract(Z); // retract
     disableLengthCompensation();
@@ -769,8 +570,8 @@ function onSection() {
       }
       forceABC();
     } else {
-      if (insertToolCall || newWorkPlane || currentSectionNeedsTCP) {
-        cancelWorkPlane(currentSectionNeedsTCP); // force G69 output for TCP transitions
+      if (insertToolCall || newWorkPlane) {
+        cancelWorkPlane();
       }
       if (insertToolCall || smoothing.cancel) {
         setSmoothing(false);
@@ -803,15 +604,10 @@ function onSection() {
     // G100 tool call macro does handle retract, initial positioning XYZABC and starts the spindle
     state.retractedZ = true;
     writeToolCall(tool, insertToolCall);
-    if (toolChangeTCPEntry) {
-      startSpindle(tool, insertToolCall);
-    }
     formatWords(gPlaneModal.format(17), gAbsIncModal.format(90), gFeedModeModal.format(94)); // re-apply modal format
   } else {
     defineWorkPlane(currentSection, true);
-    if (!sameToolTCPEntry) {
-      startSpindle(tool, insertToolCall);
-    }
+    startSpindle(tool, insertToolCall);
   }
   // write parametric feedrate table
   if (typeof initializeParametricFeeds == "function") {
@@ -825,35 +621,20 @@ function onSection() {
 
   setProbeAngle(); // output probe angle rotations if required
 
-  if (!sameToolTCPEntry) {
-    setCoolant(tool.coolant); // writes the required coolant codes
-    // add dwell for through coolant if needed
-    if (tool.coolant == COOLANT_THROUGH_TOOL || tool.coolant == COOLANT_AIR_THROUGH_TOOL || tool.coolant == COOLANT_FLOOD_THROUGH_TOOL) {
-      if (isFirstSection()) {
+  setCoolant(tool.coolant); // writes the required coolant codes
+  // add dwell for through coolant if needed
+  if (tool.coolant == COOLANT_THROUGH_TOOL || tool.coolant == COOLANT_AIR_THROUGH_TOOL || tool.coolant == COOLANT_FLOOD_THROUGH_TOOL) {
+    if (isFirstSection()) {
+      onDwell(1);
+    } else {
+      var lastCoolant = getPreviousSection().getTool().coolant;
+      if (!(lastCoolant == COOLANT_THROUGH_TOOL || lastCoolant == COOLANT_AIR_THROUGH_TOOL || lastCoolant == COOLANT_FLOOD_THROUGH_TOOL)) {
         onDwell(1);
-      } else {
-        var lastCoolant = getPreviousSection().getTool().coolant;
-        if (!(lastCoolant == COOLANT_THROUGH_TOOL || lastCoolant == COOLANT_AIR_THROUGH_TOOL || lastCoolant == COOLANT_FLOOD_THROUGH_TOOL)) {
-          onDwell(1);
-        }
       }
     }
   }
 
-  // TWP FORK: widen the pre-TCP smoothing cancel to ANY section entering TCP (3+2
-  // optimized-for-machine included, not just simultaneous multiaxis) - G43.4 with
-  // M298 machining mode modal alarms SM4125 "TCP control command not possible (M298)"
-  var sectionEntersTCP = isTCPSupportedByOperation(currentSection) &&
-    (currentSection.isMultiAxis() || currentSection.isOptimizedForMachine());
-  if (sectionEntersTCP && !state.tcpIsActive) {
-    setSmoothing(false); // cancel any previously active non-TCP smoothing before entering TCP setup
-    writeSmoothingBlock([mFormat.format(299)], getSmoothingDescription("off", false, -1));
-  }
-
-  var deferTcpSmoothing = smoothing.isAllowed && smoothing.commandMode == "tcp5axis";
-  if (!deferTcpSmoothing) {
-    setSmoothing(smoothing.isAllowed);
-  }
+  setSmoothing(smoothing.isAllowed);
 
   if (getProperty("washdownCoolant") == "always") {
     writeBlock(washdownModal.format(tool.type == TOOL_PROBE ? washdownCoolant.off : washdownCoolant.on));
@@ -861,28 +642,14 @@ function onSection() {
 
   // prepositioning
   var initialPosition = getFramePosition(currentSection.getInitialPosition());
-  if (!insertToolCall || toolChangeTCPEntry) { // tool-change TCP entries use standard initial positioning to force G43.4 output
+  if (!insertToolCall) { // G100 tool call macro does handle initial positioning
     var isRequired = state.retractedZ || !state.lengthCompensationActive || (!isFirstSection() && getPreviousSection().isMultiAxis());
-    var sameToolNonTCPtoTCP = !isFirstSection() && !isToolChangeNeeded() && isTCPSupportedByOperation(currentSection) && !state.tcpIsActive;
-    if (toolChangeTCPEntry) {
-      writeInitialPositioning(initialPosition, true);
-      forceAny();
-    } else if (currentSection.isMultiAxis() || (currentSection.isOptimizedForMachine() && isTCPSupportedByOperation(currentSection))) {
+    if (currentSection.isMultiAxis() || (currentSection.isOptimizedForMachine() && isTCPSupportedByOperation(currentSection))) {
       onCommand(COMMAND_LOAD_TOOL);
-      if (sameToolNonTCPtoTCP) {
-        startSpindle(tool, insertToolCall);
-        pendingTCPCoolant = true; // coolant will be output just before G69 in writeInitialPositioning
-        writeInitialPositioning(initialPosition, isRequired);
-        pendingTCPCoolant = false; // clear in case it wasn't consumed
-      }
       forceAny();
     } else {
       writeInitialPositioning(initialPosition, isRequired);
     }
-  }
-
-  if (deferTcpSmoothing) {
-    setSmoothing(smoothing.isAllowed);
   }
 
   // output the Machining Load Monitor code
@@ -1064,7 +831,7 @@ function writeDrillCycle(cycle, x, y, z) {
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-          getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
         );
       } else {
         writeBlock(
@@ -1085,7 +852,7 @@ function writeDrillCycle(cycle, x, y, z) {
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-          getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
         );
       } else {
         writeBlock(
@@ -1106,7 +873,7 @@ function writeDrillCycle(cycle, x, y, z) {
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-          getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
         );
       } else {
         writeBlock(
@@ -1120,20 +887,24 @@ function writeDrillCycle(cycle, x, y, z) {
     case "tapping-with-chip-breaking":
     case "left-tapping-with-chip-breaking":
     case "right-tapping-with-chip-breaking":
-      if (!F) {
-        F = tool.getTappingFeedrate();
-      }
-      if (getProperty("usePitchForTapping")) {
-        writeBlock(
-          gRetractModal.format(98), gCycleModal.format((tool.type == TOOL_TAP_LEFT_HAND) ? 278 : 277),
-          getCommonCycle(x, y, cycle.bottom, cycle.retract),
-          "Q" + xyzFormat.format(cycle.incrementalDepth),
-          unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
-          unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-          getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
-        );
-      } else { // G84/G74 does not support chip breaking
-        error(localize("Tapping with chip breaking is not supported by the G74/G84 cycle."));
+      if (cycle.accumulatedDepth < cycle.depth) {
+        error(localize("Accumulated pecking depth is not supported for tapping cycles with chip breaking."));
+      } else {
+        if (!F) {
+          F = tool.getTappingFeedrate();
+        }
+        if (getProperty("usePitchForTapping")) {
+          writeBlock(
+            gRetractModal.format(98), gCycleModal.format((tool.type == TOOL_TAP_LEFT_HAND) ? 78 : 77),
+            getCommonCycle(x, y, cycle.bottom, cycle.retract),
+            "Q" + xyzFormat.format(cycle.incrementalDepth),
+            unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
+            unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
+            getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
+          );
+        } else { // G84/G74 does not support chip breaking
+          error(localize("Tapping with chip breaking is not supported by the G74/G84 cycle."));
+        }
       }
       break;
     case "fine-boring":
@@ -1783,16 +1554,6 @@ function writeProbeCycle(cycle, x, y, z) {
   }
 }
 
-// TWP FORK: deferred WCS-update state for probing under an active G68.2. The D-00 blocks
-// work offset writes while feature coordinate manufacturing mode is engaged (SM4107), and
-// single-axis cycles with S under G68.2 trip the Renishaw XYZ-error gate (SM9123 / #3000=123).
-// Cycles therefore run geometry-only in-frame and the update is written after G69.
-var twpWcsUpdate = {pending:false, sCode:undefined};
-function isTWPProbingActive() {
-  return getSetting("workPlaneMethod.useTiltedWorkplane", false) &&
-    typeof gRotationModal != "undefined" && gRotationModal.getCurrent() == 68.2;
-}
-
 function getProbingArguments(cycle, updateWCS) {
   var outputWCSCode = updateWCS && currentSection.strategy == "probe";
   var probeOutputWorkOffset = currentSection.probeWorkOffset;
@@ -1804,13 +1565,6 @@ function getProbingArguments(cycle, updateWCS) {
     }
   }
   if (getProperty("probingType") == "Renishaw") {
-    var twpSCode = "S" + probeWCSFormat.format(probeOutputWorkOffset > 6 ? (probeOutputWorkOffset - 6 + 100) : (probeOutputWorkOffset + 53));
-    if (outputWCSCode && isTWPProbingActive()) {
-      // TWP FORK: suppress the in-cycle S and defer the offset write to section end
-      twpWcsUpdate.pending = true;
-      twpWcsUpdate.sCode = twpSCode;
-      outputWCSCode = false;
-    }
     return [
       (cycle.angleAskewAction == "stop-message" ? "B" + xyzFormat.format(cycle.toleranceAngle ? cycle.toleranceAngle : 0) : undefined),
       ((cycle.updateToolWear && cycle.toolWearErrorCorrection < 100) ? "F" + xyzFormat.format(cycle.toolWearErrorCorrection ? cycle.toolWearErrorCorrection / 100 : 100) : undefined),
@@ -1820,7 +1574,7 @@ function getProbingArguments(cycle, updateWCS) {
       ((cycle.updateToolWear && cycleType !== "probing-z") ? "T" + xyzFormat.format(cycle.toolDiameterOffset) : undefined),
       (cycle.updateToolWear ? "V" + xyzFormat.format(cycle.toolWearUpdateThreshold ? cycle.toolWearUpdateThreshold : 0) : undefined),
       (cycle.printResults ? "W" + xyzFormat.format(1 + cycle.incrementComponent) : undefined), // 1 for advance feature, 2 for reset feature count and advance component number. first reported result in a program should use W2.
-      conditional(outputWCSCode, twpSCode)
+      conditional(outputWCSCode, "S" + probeWCSFormat.format(probeOutputWorkOffset > 6 ? (probeOutputWorkOffset - 6 + 100) : probeOutputWorkOffset))
     ];
   } else {
     return [
@@ -1861,9 +1615,6 @@ function onCommand(command) {
     setCoolant(tool.coolant);
     return;
   case COMMAND_STOP:
-    if (getProperty("partAccessOnStop") && !inSection) {
-      moveToPartAccess(false); // TWP FORK: Manual NC Stop between operations - bring the table to the door
-    }
     writeBlock(mFormat.format(0));
     forceSpindleSpeed = true;
     forceCoolant = true;
@@ -1886,39 +1637,24 @@ function onCommand(command) {
     var abc = settings.workPlaneMethod.useTiltedWorkplane ? undefined : defineWorkPlane(currentSection, false);
     var start = getFramePosition(currentSection.getInitialPosition());
     var preloadTool = getNextTool(tool.number != getFirstTool().number);
-    // For TCP entries that use writeInitialPositioning, output bare G100 only (no coordinates/offset code)
-    var isSameToolNonTCPtoTCP = tcp.isSupportedByOperation && !state.tcpIsActive && 
-      !isFirstSection() && !isToolChangeNeeded() && isTCPSupportedByOperation(currentSection);
-    var isToolChangeTCPEntry = isToolChangeNeeded("number") && tcp.isSupportedByOperation &&
-      (currentSection.isMultiAxis() || currentSection.isOptimizedForMachine());
-    
-    if (isSameToolNonTCPtoTCP || isToolChangeTCPEntry) {
-      writeBlock(gFormat.format(100), "T" + toolFormat.format(tool.number));
-      if (isToolChangeTCPEntry) {
-        // TWP FORK: bare G100 bypasses writeToolBlock, so machine simulation never saw the tool change
-        // ("Tool-change instruction missing" / "Connection without a tool"). Simulation-only - NC output unchanged.
-        machineSimulation({mode:TOOLCHANGE});
-      }
-    } else {
-      writeToolBlock(gFormat.format(100),
-        "T" + toolFormat.format(tool.number),
-        xOutput.format(start.x),
-        yOutput.format(start.y),
-        getOffsetCode(),
-        zOutput.format(start.z),
-        abc ? aOutput.format(abc.x) : undefined,
-        abc ? bOutput.format(abc.y) : undefined,
-        abc ? cOutput.format(abc.z) : undefined,
-        (getProperty("preloadTool") && preloadTool) ? "L" + toolFormat.format(preloadTool.number) : undefined,
-        hFormat.format(tool.lengthOffset),
-        tool.type != TOOL_PROBE ? diameterOffsetFormat.format(tool.diameterOffset) : "",
-        tool.type != TOOL_PROBE ? sOutput.format(spindleSpeed) : "",
-        tool.type != TOOL_PROBE ? mFormat.format(tool.clockwise ? 3 : 4) : ""
-      );
-    }
+    writeToolBlock(gFormat.format(100),
+      "T" + toolFormat.format(tool.number),
+      xOutput.format(start.x),
+      yOutput.format(start.y),
+      getOffsetCode(),
+      zOutput.format(start.z),
+      abc ? aOutput.format(abc.x) : undefined,
+      abc ? bOutput.format(abc.y) : undefined,
+      abc ? cOutput.format(abc.z) : undefined,
+      (getProperty("preloadTool") && preloadTool) ? "L" + toolFormat.format(preloadTool.number) : undefined,
+      hFormat.format(tool.lengthOffset),
+      tool.type != TOOL_PROBE ? diameterOffsetFormat.format(tool.diameterOffset) : "",
+      tool.type != TOOL_PROBE ? sOutput.format(spindleSpeed) : "",
+      tool.type != TOOL_PROBE ? mFormat.format(tool.clockwise ? 3 : 4) : ""
+    );
     writeComment(tool.comment);
     currentWorkPlaneABC = abc ? abc : currentWorkPlaneABC; // workplane is set with the G100 command
-    forceSpindleSpeed = isSameToolNonTCPtoTCP || isToolChangeTCPEntry;
+    forceSpindleSpeed = false;
 
     // for machine simulation, with TCP enabled G100 acts like prepositionWithTWP
     if (abc != undefined) {
@@ -1971,16 +1707,6 @@ function onCommand(command) {
   case COMMAND_STOP_CHIP_TRANSPORT:
     return;
   case COMMAND_BREAK_CONTROL:
-    onCommand(COMMAND_COOLANT_OFF);
-    writeRetract(Z); // outputs G28 G91 Z0 + G90 with current retract settings
-    disableLengthCompensation(true); // force G49 output
-    cancelWorkPlane(true); // force G69 output
-    smoothing.force = true;
-    setSmoothing(false); // force smoothing-off code (M289 in mode B)
-    writeComment("PERFORMING TOOL BREAK DETECTION");
-    onCommand(COMMAND_STOP_SPINDLE);
-    writeBlock(mFormat.format(98), "P8000");
-    onCommand(COMMAND_STOP_SPINDLE); // enforce M05 directly after break-check macro call
     return;
   case COMMAND_TOOL_MEASURE:
     return;
@@ -2000,12 +1726,6 @@ function onCommand(command) {
 }
 
 function onSectionEnd() {
-  if (smoothing.tcpInLinkMove) {
-    smoothing.tcpInLinkMove = false;
-    if (smoothing.commandMode == "tcp5axis" && smoothing.level != -1) {
-      writeBlock(mFormat.format(smoothing.level));
-    }
-  }
   if (currentSection.isMultiAxis()) {
     writeBlock(gFeedModeModal.format(94)); // inverse time feed off
   }
@@ -2013,12 +1733,6 @@ function onSectionEnd() {
     writeBlock(getProperty("commissioningMode") ? onCommand(COMMAND_STOP) : "");
   }
   writeBlock(gPlaneModal.format(17));
-
-  // Output G43 before retract when transitioning from non-TCP to TCP on same tool to prevent SM4124 alarm
-  if (!isLastSection() && !state.tcpIsActive && isTCPSupportedByOperation(getNextSection()) && 
-      !isToolChangeNeeded(getNextSection(), getProperty("toolAsName") ? "description" : "number")) {
-    writeBlock(toolLengthCompOutput.format(43)); // standard comp before retract
-  }
 
   if (tool.type != TOOL_PROBE && getProperty("washdownCoolant") == "operationEnd") {
     writeBlock(washdownModal.format(washdownCoolant.on));
@@ -2034,28 +1748,9 @@ function onSectionEnd() {
   }
   if (isProbeOperation()) {
     if (getProperty("probingType") == "Renishaw") {
-      if (twpWcsUpdate.pending) {
-        // TWP FORK: convert banked errors #151/#152/#153 to machine-frame deltas
-        // #140/#141/#142 - O8744 must run while G68.2 is STILL ACTIVE (does a
-        // +/-1mm X/Y identity test move at the current position)
-        writeComment("TWP WCS UPDATE - FCS TO WCS CONVERSION");
-        writeBlock(settings.probing.macroCall, "P" + 8744);
-      }
       writeBlock(settings.probing.macroCall, "P" + 8833); // spin the probe off
       if (probeVariables.probeAngleMethod != "G68") {
         setProbeAngle(); // output probe angle rotations if required
-      }
-      if (twpWcsUpdate.pending) {
-        // TWP FORK: the D-00 only accepts the work offset write OUTSIDE the tilted
-        // frame - retract, cancel G43 then G69, then write via O8732 (W1.=work
-        // offset mode, Z1. enables the Z component write)
-        writeRetract(Z);
-        disableLengthCompensation(true);
-        cancelWorkPlane(true);
-        writeComment("TWP WCS UPDATE - OFFSET WRITE");
-        writeBlock(settings.probing.macroCall, "P" + 8732, twpWcsUpdate.sCode, "W1.", "Z1.");
-        twpWcsUpdate.pending = false;
-        twpWcsUpdate.sCode = undefined;
       }
     }
   }
@@ -2064,7 +1759,6 @@ function onSectionEnd() {
   }
   forceAny();
   setAllowedCircularPlanes(currentSection.getId());
-  inSection = false; // TWP FORK: see inSection
 }
 
 function setAllowedCircularPlanes(sectionId) {
@@ -2086,14 +1780,6 @@ function writeRetract() {
     }
     if (retract.retractAxes[2] && state.tcpIsActive) {
       writeBlock(gFormat.format(100), "T" + toolFormat.format(currentToolNumber));
-      forceModals(gAbsIncModal);
-      writeBlock(gAbsIncModal.format(90));
-      var currentSectionNeedsSameToolRestart = (typeof currentSection != "undefined") && !isFirstSection() &&
-        !isToolChangeNeeded(getProperty("toolAsName") ? "description" : "number");
-      if (currentSectionNeedsSameToolRestart) {
-        forceSpindleSpeed = true;
-        forceCoolant = true;
-      }
       machineSimulation({mode:RETRACTTOOLAXIS});
       return;
     }
@@ -2156,9 +1842,7 @@ function onClose() {
 
   var firstToolNumber = getSection(0).getTool().number;
   writeBlock(gFormat.format(100), "T" + toolFormat.format(firstToolNumber));
-  if (getProperty("partAccessOnProgramEnd")) {
-    moveToPartAccess(true); // TWP FORK: table to the door instead of machine X0 Y0
-  } else if (getSetting("retract.homeXY.onProgramEnd", false)) {
+  if (getSetting("retract.homeXY.onProgramEnd", false)) {
     writeRetract(settings.retract.homeXY.onProgramEnd);
   }
   setSmoothing(false);
@@ -3178,7 +2862,6 @@ var currentCoolantMode = COOLANT_OFF;
 var coolantOff = undefined;
 var isOptionalCoolant = false;
 var forceCoolant = false;
-var pendingTCPCoolant = false; // deferred coolant for same-tool non-TCP to TCP transitions
 
 function setCoolant(coolant) {
   var coolantCodes = getCoolantCodes(coolant);
@@ -3292,106 +2975,13 @@ var smoothing = {
   isDifferent: false, // tells if smoothing levels/tolerances/both are different between operations
   level      : -1, // the active level of smoothing
   tolerance  : -1, // the current operation tolerance
-  force      : false, // smoothing needs to be forced out in this operation
-  commandMode: undefined, // smoothing command family for the current section
-  activeMode : undefined, // smoothing command family currently active on the control
-  tcpInLinkMove: false, // simultaneous 5-axis TCP section is temporarily using link-move smoothing
-  rewindSuspended: false // TWP FORK: true only between the rewind G49 and the rewind G43.4 re-entry
+  force      : false // smoothing needs to be forced out in this operation
 };
-
-function isSimultaneousTCPSection(_section) {
-  return !!_section && _section.isMultiAxis() && isTCPSupportedByOperation(_section);
-}
-
-function getSmoothingDescription(commandMode, mode, level) {
-  if (!mode) {
-    switch (commandMode) {
-    case "off":
-      return "SMOOTHING OFF";
-    case "tcp5axis":
-      return "5-AXIS TCP SMOOTHING OFF";
-    default:
-      return "HIGH ACCURACY MODE OFF";
-    }
-  }
-
-  switch (commandMode) {
-  case "A":
-  case "B":
-  case "M298":
-  default:
-    switch (level) {
-    case 0:
-      return "HIGH ACCURACY STANDARD";
-    case 1:
-      return "HIGH ACCURACY ROUGHING";
-    case 2:
-      return "HIGH ACCURACY MEDIUM ROUGH";
-    case 3:
-      return "HIGH ACCURACY MEDIUM ROUGH HIGH";
-    case 4:
-      return "HIGH ACCURACY FINISHING";
-    case 5:
-      return "HIGH ACCURACY FINISHING HIGH";
-    default:
-      return "HIGH ACCURACY MODE";
-    }
-  case "tcp5axis":
-    switch (level) {
-    case 280:
-      return "5-AXIS TCP SMOOTHING M280 STANDARD GENERAL USE";
-    case 281:
-      return "5-AXIS TCP SMOOTHING M281 VERY ACCURATE PATH ACCURACY LIMITED SMOOTHING";
-    case 282:
-      return "5-AXIS TCP SMOOTHING M282 VERY HIGH PATH ACCURACY MORE SMOOTHING";
-    case 283:
-      return "5-AXIS TCP SMOOTHING M283 HIGHEST PATH ACCURACY LIMITED SMOOTHING";
-    case 284:
-      return "5-AXIS TCP SMOOTHING M284 ROUGHING TRANSITION PATHS";
-    case 285:
-      return "5-AXIS TCP SMOOTHING M285 CUSTOM DEBURR CUTTING";
-    default:
-      return "5-AXIS TCP SMOOTHING";
-    }
-  }
-}
-
-function writeSmoothingBlock(words, description) {
-  var outputWords = words.slice(0);
-  if (getProperty("showSmoothingAnnotations") && description) {
-    outputWords.push(formatComment(description));
-  }
-  writeBlock.apply(null, outputWords);
-}
-
-function outputSmoothingCommand(mode, commandMode, level) {
-  var mappedLevel = (level >= 0 && level <= 5) ? [0, 5, 3, 4, 1, 2][level] : level;
-  var description = getSmoothingDescription(commandMode, mode, level);
-  switch (commandMode) {
-  case "A":
-    writeSmoothingBlock([mFormat.format(mode ? 260 + mappedLevel : 269)], description);
-    break;
-  case "B":
-    writeSmoothingBlock([mFormat.format(mode ? 280 + mappedLevel : 289)], description);
-    break;
-  case "tcp5axis":
-    writeSmoothingBlock([mFormat.format(mode ? level : 289)], description);
-    break;
-  case "off":
-    writeSmoothingBlock([mFormat.format(299)], description);
-    break;
-  default:
-    writeSmoothingBlock([mFormat.format(298), mode ? "L" + level : "L0"], description);
-    break;
-  }
-}
 
 function initializeSmoothing() {
   var smoothingSettings = settings.smoothing;
   var previousLevel = smoothing.level;
   var previousTolerance = xyzFormat.getResultingValue(smoothing.tolerance);
-  var previousCommandMode = smoothing.commandMode;
-  var isTcp5AxisSection = isSimultaneousTCPSection(currentSection);
 
   // format threshold parameters
   var thresholdRoughing = xyzFormat.getResultingValue(smoothingSettings.thresholdRoughing);
@@ -3399,43 +2989,12 @@ function initializeSmoothing() {
   var thresholdFinishing = xyzFormat.getResultingValue(smoothingSettings.thresholdFinishing);
 
   // determine new smoothing levels and tolerances
-  smoothing.commandMode = isTcp5AxisSection ? "tcp5axis" : getProperty("smoothingMode");
-  smoothing.level = parseInt(isTcp5AxisSection ? getProperty("fiveAxisSmoothing") : getProperty("useSmoothing"), 10);
+  smoothing.level = parseInt(getProperty("useSmoothing"), 10);
   smoothing.level = isNaN(smoothing.level) ? -1 : smoothing.level;
   smoothing.tolerance = xyzFormat.getResultingValue(Math.max(getParameter("operation:tolerance", thresholdFinishing), 0));
 
-  if (smoothing.commandMode == "off") {
-    smoothing.level = -1;
-  }
-
   if (smoothing.level == 9999) {
-    if (isTcp5AxisSection) {
-      if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
-        var stockToLeaveTcp = xyzFormat.getResultingValue(getParameter("operation:stockToLeave", getParameter("operation:verticalStockToLeave", 0)));
-        var verticalStockToLeaveTcp = xyzFormat.getResultingValue(getParameter("operation:verticalStockToLeave", stockToLeaveTcp));
-        if (((stockToLeaveTcp >= thresholdRoughing) && (verticalStockToLeaveTcp >= thresholdRoughing)) || getParameter("operation:strategy", "") == "face") {
-          smoothing.level = smoothingSettings.roughingTcp;
-        } else if (((stockToLeaveTcp >= thresholdSemiFinishing) && (stockToLeaveTcp < thresholdRoughing)) &&
-          ((verticalStockToLeaveTcp >= thresholdSemiFinishing) && (verticalStockToLeaveTcp < thresholdRoughing))) {
-          smoothing.level = smoothingSettings.semiTcp;
-        } else if (((stockToLeaveTcp >= thresholdFinishing) && (stockToLeaveTcp < thresholdSemiFinishing)) &&
-          ((verticalStockToLeaveTcp >= thresholdFinishing) && (verticalStockToLeaveTcp < thresholdSemiFinishing))) {
-          smoothing.level = smoothingSettings.semifinishingTcp;
-        } else {
-          smoothing.level = smoothingSettings.finishingTcp;
-        }
-      } else {
-        if (smoothing.tolerance >= thresholdRoughing || getParameter("operation:strategy", "") == "face") {
-          smoothing.level = smoothingSettings.roughingTcp;
-        } else if ((smoothing.tolerance >= thresholdSemiFinishing) && (smoothing.tolerance < thresholdRoughing)) {
-          smoothing.level = smoothingSettings.semiTcp;
-        } else if ((smoothing.tolerance >= thresholdFinishing) && (smoothing.tolerance < thresholdSemiFinishing)) {
-          smoothing.level = smoothingSettings.semifinishingTcp;
-        } else {
-          smoothing.level = smoothingSettings.finishingTcp;
-        }
-      }
-    } else if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
+    if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
       var stockToLeave = xyzFormat.getResultingValue(getParameter("operation:stockToLeave", getParameter("operation:verticalStockToLeave", 0)));
       var verticalStockToLeave = xyzFormat.getResultingValue(getParameter("operation:verticalStockToLeave", stockToLeave));
       if (((stockToLeave >= thresholdRoughing) && (verticalStockToLeave >= thresholdRoughing)) || getParameter("operation:strategy", "") == "face") {
@@ -3478,13 +3037,13 @@ function initializeSmoothing() {
 
   switch (smoothingSettings.differenceCriteria) {
   case "level":
-    smoothing.isDifferent = smoothing.level != previousLevel || smoothing.commandMode != previousCommandMode;
+    smoothing.isDifferent = smoothing.level != previousLevel;
     break;
   case "tolerance":
-    smoothing.isDifferent = smoothing.tolerance != previousTolerance || smoothing.commandMode != previousCommandMode;
+    smoothing.isDifferent = smoothing.tolerance != previousTolerance;
     break;
   case "both":
-    smoothing.isDifferent = smoothing.level != previousLevel || smoothing.tolerance != previousTolerance || smoothing.commandMode != previousCommandMode;
+    smoothing.isDifferent = smoothing.level != previousLevel || smoothing.tolerance != previousTolerance;
     break;
   default:
     error(localize("Unsupported smoothing criteria."));
@@ -3631,11 +3190,6 @@ function onRapid5D(_x, _y, _z, _a, _b, _c) {
     error(localize("Radius compensation mode cannot be changed at rapid traversal."));
     return;
   }
-  var isTcp5AxisSection = isSimultaneousTCPSection(currentSection);
-  // TWP FORK: the rewind rotary index (onRotateAxes) posts as G00 - it is the ONLY rapid-while-suspended move.
-  // All normal TCP link moves still post as high-feed G01 (rapids under TCP stop at every block).
-  var useHighFeedLinkMove = isTcp5AxisSection && isTcpLinkMove() && !smoothing.rewindSuspended;
-  manageTcpLinkSmoothing(useHighFeedLinkMove);
   if (!currentSection.isOptimizedForMachine()) {
     forceXYZ();
   }
@@ -3647,12 +3201,7 @@ function onRapid5D(_x, _y, _z, _a, _b, _c) {
   var c = currentSection.isOptimizedForMachine() ? cOutput.format(_c) : toolVectorOutputK.format(_c);
 
   if (x || y || z || a || b || c) {
-    if (useHighFeedLinkMove) {
-      forceFeed();
-      writeBlock(gFeedModeModal.format(getProperty("useG95") ? 95 : 94), gMotionModal.format(1), x, y, z, a, b, c, getFeed(highFeedrate));
-    } else {
-      writeBlock(gMotionModal.format(0), x, y, z, a, b, c);
-    }
+    writeBlock(gMotionModal.format(0), x, y, z, a, b, c);
     forceFeed();
   }
 }
@@ -3663,7 +3212,6 @@ function onLinear5D(_x, _y, _z, _a, _b, _c, feed, feedMode) {
     error(localize("Radius compensation cannot be activated/deactivated for 5-axis move."));
     return;
   }
-  manageTcpLinkSmoothing(isSimultaneousTCPSection(currentSection) && isTcpLinkMove());
   if (!currentSection.isOptimizedForMachine()) {
     forceXYZ();
   }
@@ -3796,14 +3344,6 @@ function cancelWorkPlane(force) {
     }
     var command = gRotationModal.format(69);
     if (command) {
-      // TWP FORK: the D-00 alarms (SM4106 Feature coordinate command error) if G69 is
-      // commanded while tool length compensation is still active - cancel G43 first
-      if (state.lengthCompensationActive && typeof disableLengthCompensation == "function") {
-        if (!state.retractedZ) {
-          writeRetract(Z);
-        }
-        disableLengthCompensation(true);
-      }
       writeBlock(command); // cancel frame
       forceWorkPlane();
     }
@@ -3950,10 +3490,9 @@ function writeInitialPositioning(position, isRequired, codes1, codes2) {
         setWorkPlane(angles);
         writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(prePosition.x), yOutput.format(prePosition.y), feed, additionalCodes[0]);
         machineSimulation({x:prePosition.x, y:prePosition.y});
-        if (pendingTCPCoolant) { setCoolant(tool.coolant); pendingTCPCoolant = false; } // emit coolant just before G69
         cancelWorkPlane();
-        writeBlock(modalCodes, gMotionModal.format(motionCode.single), getOffsetCode(), xOutput.format(position.x), yOutput.format(position.y), zOutput.format(position.z), hOffset, additionalCodes[1]);
-        machineSimulation({x:position.x, y:position.y, z:position.z});
+        writeBlock(getOffsetCode(), hOffset, additionalCodes[1]); // omit Z-axis output is desired
+        forceAny(); // required to output XYZ coordinates in the following line
       } else {
         writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(position.x), yOutput.format(position.y), feed, additionalCodes[0]);
         machineSimulation({x:position.x, y:position.y});
@@ -4043,7 +3582,6 @@ function onMoveToSafeRetractPosition() {
       disableLengthCompensation(false);
     }
   }
-  suspendSmoothingForRewind(); // TWP FORK: M289 before the rotary index (SM4039.004)
   writeRetract(Z);
   if (getSetting("retract.homeXY.onIndexing", false)) {
     writeRetract(settings.retract.homeXY.onIndexing);
@@ -4070,10 +3608,8 @@ function onRotateAxes(_x, _y, _z, _a, _b, _c) {
 
 /** Return from safe position after indexing rotaries. */
 function onReturnFromSafeRetractPosition(_x, _y, _z) {
-  restartSpindleAfterRewind(); // TWP FORK: the rewind retract G100 T__ stops the spindle - restart at Z home before re-entry
   if (!machineConfiguration.isHeadConfiguration()) {
     writeInitialPositioning(new Vector(_x, _y, _z), true);
-    restoreSmoothingAfterRewind(); // TWP FORK: after G43.4 - same placement as section-entry TCP smoothing
     if (highFeedMapping != HIGH_FEED_NO_MAPPING) {
       onLinear5D(_x, _y, _z, getCurrentDirection().x, getCurrentDirection().y, getCurrentDirection().z, highFeedrate);
     } else {
@@ -4088,7 +3624,6 @@ function onReturnFromSafeRetractPosition(_x, _y, _z) {
         writeBlock(getOffsetCode(), hFormat.format(tool.lengthOffset));
       }
     }
-    restoreSmoothingAfterRewind(); // TWP FORK: after TCP re-enable
     forceXYZ();
     xOutput.reset();
     yOutput.reset();

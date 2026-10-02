@@ -2,23 +2,23 @@
   Copyright (C) 2012-2026 by Autodesk, Inc.
   All rights reserved.
 
-  Brother Speedio post processor configuration.
+  Brother post processor configuration.
 
   $Revision: 44214 1f74fb3c348cc93e66ee15e354e2015b2aaf19e6 $
   $Date: 2026-02-17 04:16:48 $
 
-  FORKID {C09133CD-6F13-4DFC-9EB8-41260FBB5B08}
+  FORKID {ED1445A8-CD97-4C31-833C-2DF86ECBAF7E}
 */
 
-description = "Brother Speedio U500XD1 2026 TWP FINAL R1001";
-var postRevTag = "R1001"; // TWP FORK: post revision tag - appended to the program name line to prove which post copy generated the file
+// >>>>> INCLUDED FROM generic_posts/brother speedio.cps
+description = "Brother Speedio";
 vendor = "Brother";
 vendorUrl = "http://www.brother.com";
 legal = "Copyright (C) 2012-2026 by Autodesk, Inc.";
 certificationLevel = 2;
 minimumRevision = 45917;
 
-longDescription = "RGT fork of the U500XD1 2026 post with tilted-work-plane (G68.2) WCS probing support for the Renishaw Inspection Plus suite on the D-00 control. Under an active G68.2, probe cycles with a WCS override post as geometry-only (errors bank in #151/#152/#153); the section end emits G65 P8744 (FCS-to-WCS conversion, in-frame) then G49/G69 and G65 P8732 (offset write, out-of-frame) because the D-00 blocks work offset writes while feature coordinate manufacturing mode is engaged (SM4107). Also enforces G49 before every G69 (SM4106). Flat (non-TWP) probing posts identically to the parent post. Angular/plane-angle WCS probing under TWP is not supported by this scheme.";
+longDescription = "Generic milling post for use with all common Brother Speedio mills like S, W, R, U, F and H series machines.";
 
 extension = "NC";
 programNameIsInteger = false;
@@ -47,7 +47,7 @@ properties = {
     description: "Preloads the next tool at a tool change (if any).",
     group      : "preferences",
     type       : "boolean",
-    value      : false,
+    value      : true,
     scope      : "post"
   },
   showSequenceNumbers: {
@@ -60,7 +60,7 @@ properties = {
       {title:"No", id:"false"},
       {title:"Only on tool change", id:"toolChange"}
     ],
-    value: "false",
+    value: "true",
     scope: "post"
   },
   sequenceNumberStart: {
@@ -77,46 +77,6 @@ properties = {
     group      : "formats",
     type       : "integer",
     value      : 5,
-    scope      : "post"
-  },
-  partAccessOnStop: {
-    title      : "Part access: move table on M00",
-    description: "TWP FORK: at a Manual NC Stop (M00) between operations - coolant off, spindle stop, retract Z, cancel G43/G43.4 + G68.2 + smoothing, then G53 rapid to the part-access X/Y below before the M00. The next operation re-establishes everything.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
-    scope      : "post"
-  },
-  partAccessOnProgramEnd: {
-    title      : "Part access: move table at program end",
-    description: "TWP FORK: at program end, G53 rapid to the part-access X/Y below instead of machine X0 Y0.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
-    scope      : "post"
-  },
-  partAccessX: {
-    title      : "Part access X (machine coord)",
-    description: "TWP FORK: G53 MACHINE coordinate X for the table part-access position (front/center of the door), in program units. Jog there on the pendant and read the MACHINE position. 0 = machine home.",
-    group      : "preferences",
-    type       : "number",
-    value      : -11.75,
-    scope      : "post"
-  },
-  partAccessY: {
-    title      : "Part access Y (machine coord)",
-    description: "TWP FORK: G53 MACHINE coordinate Y for the table part-access position (front/center of the door), in program units. 0 = machine home.",
-    group      : "preferences",
-    type       : "number",
-    value      : 0,
-    scope      : "post"
-  },
-  partAccessLevelTable: {
-    title      : "Part access: level table (A0 C0) on M00",
-    description: "TWP FORK: rotate to A0 C0 at Z home BEFORE the X/Y move at an M00 part-access stop (same order as the O8000 break-check macro: G28 Z, G28 A, then XY). Program end always levels first.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
     scope      : "post"
   },
   optionalStop: {
@@ -190,7 +150,7 @@ properties = {
       {title:"End of operation", id:"operationEnd"},
       {title:"Program end", id:"programEnd"}
     ],
-    value: "always",
+    value: "off",
     scope: "post"
   },
   usePitchForTapping: {
@@ -206,7 +166,7 @@ properties = {
     description: "If enabled, an L value containing double the spindle speed (up to 6000) will be output in the G77 tapping cycle.",
     group      : "preferences",
     type       : "boolean",
-    value      : true,
+    value      : false,
     scope      : "post"
   },
   useClampCodes: {
@@ -227,7 +187,7 @@ properties = {
       {title:"B", id:"B"},
       {title:"M298", id:"M298"}
     ],
-    value: "M298"
+    value: "A"
   },
   useSmoothing: {
     title      : "High accuracy level",
@@ -244,43 +204,7 @@ properties = {
       {title:"Finishing", id:"4"}, // 1
       {title:"Finishing high", id:"5"} // 2
     ],
-    value: "9999"
-  },
-  fiveAxisSmoothing: {
-    title      : "5-Axis TCP smoothing",
-    description: "Select the smoothing mode to use for simultaneous 5-axis TCP toolpaths.",
-    group      : "preferences",
-    type       : "enum",
-    values     : [
-      {title:"Off", id:"-1"},
-      {title:"Automatic", id:"9999"},
-      {title:"M280 - Standard/General Use", id:"280"},
-      {title:"M281 - Very Accurate Path Accuracy / Limited Smoothing", id:"281"},
-      {title:"M282 - Very High Path Accuracy / More Smoothing", id:"282"},
-      {title:"M283 - Highest Path Accuracy / Limited Smoothing", id:"283"},
-      {title:"M284 - Roughing/Transition Paths", id:"284"},
-      {title:"M285 - Custom (Deburr Cutting)", id:"285"}
-    ],
-    value: "285"
-  },
-  fiveAxisLinkSmoothing: {
-    title      : "5-Axis TCP link move smoothing",
-    description: "Select the smoothing state used during simultaneous 5-axis TCP linking moves before returning to the section smoothing mode.",
-    group      : "preferences",
-    type       : "enum",
-    values     : [
-      {title:"Off", id:"-1"},
-      {title:"M284 - Roughing/Transition Paths", id:"284"}
-    ],
-    value: "284"
-  },
-  showSmoothingAnnotations: {
-    title      : "Show smoothing annotations",
-    description: "Outputs comments describing smoothing mode changes in the NC code.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
-    scope      : "post"
+    value: "-1"
   },
   useMachiningLoadMonitor: {
     title      : "Machining Load Monitor",
@@ -321,7 +245,7 @@ properties = {
     description: "Enable to use G68.2 for 3+2 operations.",
     group      : "multiAxis",
     type       : "boolean",
-    value      : true,
+    value      : false,
     scope      : "machine"
   },
   singleResultsFile: {
@@ -413,10 +337,6 @@ var settings = {
     semi                  : 3, // semi-roughing level for smoothing in automatic mode
     semifinishing         : 4, // semi-finishing level for smoothing in automatic mode
     finishing             : 5, // finishing level for smoothing in automatic mode
-    roughingTcp           : 284, // roughing level for simultaneous 5-axis TCP smoothing in automatic mode
-    semiTcp               : 283, // semi-roughing level for simultaneous 5-axis TCP smoothing in automatic mode
-    semifinishingTcp      : 282, // semi-finishing level for simultaneous 5-axis TCP smoothing in automatic mode
-    finishingTcp          : 281, // finishing level for simultaneous 5-axis TCP smoothing in automatic mode
     thresholdRoughing     : toPreciseUnit(0.5, MM), // operations with stock/tolerance above that threshold will use roughing level in automatic mode
     thresholdFinishing    : toPreciseUnit(0.05, MM), // operations with stock/tolerance below that threshold will use finishing level in automatic mode
     thresholdSemiFinishing: toPreciseUnit(0.1, MM), // operations with stock/tolerance above finishing and below threshold roughing that threshold will use semi finishing level in automatic mode
@@ -578,7 +498,7 @@ function onOpen() {
   sixthAxisClamp.format(445); // Default 6th axis modal code to be clamped
 
   if (programName) {
-    writeComment(programName + conditional(programComment, SP + formatComment(programComment)) + SP + postRevTag); // TWP FORK: rev tag on the name line
+    writeComment(programName + conditional(programComment, SP + formatComment(programComment)));
   } else {
     error(localize("Program name has not been specified."));
   }
@@ -604,161 +524,43 @@ function setSmoothing(mode) {
     validate(!state.lengthCompensationActive, "Length compensation is active while trying to update smoothing.");
   }
 
-  var commandMode = smoothing.commandMode;
-  if (mode && smoothing.isActive && smoothing.activeMode != commandMode) {
-    outputSmoothingCommand(false, smoothing.activeMode, smoothing.level);
-    smoothing.isActive = false;
-    smoothing.activeMode = undefined;
+  // for smoothingModes A and B mapping is required for smoothing level value
+  var propertyBaseLevel = parseInt(getProperty("useSmoothing"), 10);
+  propertyBaseLevel = isNaN(propertyBaseLevel) ? -1 : propertyBaseLevel;
+  var mappedLevel = (propertyBaseLevel >= 0 && propertyBaseLevel <= 5) ? [0, 5, 3, 4, 1, 2][propertyBaseLevel] : smoothing.level;
+  switch (getProperty("smoothingMode")) {
+  case "A":
+    writeBlock(mFormat.format(mode ? 260 + mappedLevel : 269));
+    break;
+  case "B":
+    writeBlock(mFormat.format(mode ? 280 + mappedLevel : 289));
+    break;
+  default:
+    writeBlock(mFormat.format(298), mode ? "L" + smoothing.level : "L0");
+    break;
   }
-
-  outputSmoothingCommand(mode, (!mode && commandMode == "off") ? commandMode : (mode ? commandMode : (smoothing.activeMode || commandMode)), smoothing.level);
   smoothing.isActive = mode;
-  smoothing.activeMode = mode ? commandMode : undefined;
-  smoothing.tcpInLinkMove = mode ? smoothing.tcpInLinkMove : false;
   smoothing.force = false;
   smoothing.isDifferent = false;
-}
-
-function isTcpLinkMove() {
-  return (typeof movement != "undefined") && ((movement == MOVEMENT_LINK_TRANSITION) || (movement == MOVEMENT_LINK_DIRECT) || (movement == MOVEMENT_HIGH_FEED));
-}
-
-function manageTcpLinkSmoothing(isLinkMove) {
-  // TWP FORK: allow link smoothing even when section 5-axis smoothing is Off
-  // (cuts run M299, links swap to the tuned M284 level, M299 restored after)
-  if (smoothing.rewindSuspended) {
-    return; // TWP FORK: no M284/M285 swaps during a rewind - high-accuracy B must stay off (SM4039.004)
-  }
-  var linkCode = parseInt(getProperty("fiveAxisLinkSmoothing"), 10);
-  if (smoothing.commandMode != "tcp5axis" || (smoothing.level == -1 && linkCode == -1)) {
-    smoothing.tcpInLinkMove = false;
-    return;
-  }
-
-  if (isLinkMove && !smoothing.tcpInLinkMove) {
-    smoothing.tcpInLinkMove = true;
-    writeSmoothingBlock([mFormat.format(linkCode == 284 ? 284 : 289)], getSmoothingDescription("tcp5axis", linkCode == 284, linkCode == 284 ? 284 : -1));
-  } else if (!isLinkMove && smoothing.tcpInLinkMove) {
-    smoothing.tcpInLinkMove = false;
-    var restoreCode = smoothing.level == -1 ? 299 : smoothing.level;
-    writeSmoothingBlock([mFormat.format(restoreCode)], getSmoothingDescription("tcp5axis", smoothing.level != -1, smoothing.level));
-  }
-}
-
-// TWP FORK: rewind smoothing handling (2026-09-25, O1520 SM4039.004)
-// M280-M287 stay modal after G49 and become high-accuracy mode B (NC manual 14.2.6.5 NOTE 1).
-// Mode B + <High accuracy B additional axes>=Valid alarms SM4039.004 on a G01/G02 moving A and C
-// together (NC manual 14.1.6). Cancel with M289 for the rewind, restore the exact prior state after G43.4.
-function suspendSmoothingForRewind() {
-  if (smoothing.rewindSuspended) {
-    return;
-  }
-  if (smoothing.tcpInLinkMove || (smoothing.isActive && smoothing.activeMode == "tcp5axis")) {
-    writeSmoothingBlock([mFormat.format(289)], getSmoothingDescription("tcp5axis", false, -1));
-  } else if (smoothing.isActive) {
-    outputSmoothingCommand(false, smoothing.activeMode, smoothing.level);
-  }
-  smoothing.rewindSuspended = true; // smoothing state vars are left as-is so the restore is exact
-}
-
-// TWP FORK: part access position (2026-09-25). Same safe-state sequence as the machine-proven
-// break-control block (coolant off, G28/G100 retract, G49 before G69, smoothing off, M05), then a
-// G53 rapid to the operator-set X/Y. State flags are updated by the called functions, so the next
-// operation re-outputs G68.2/G53.1, G43/G43.4 + H, spindle and coolant as normal.
-function moveToPartAccess(atProgramEnd) {
-  var wasTCP = state.tcpIsActive;
-  onCommand(COMMAND_COOLANT_OFF);
-  writeRetract(Z);
-  disableLengthCompensation(true);
-  cancelWorkPlane(true);
-  var modeBWasOn = smoothing.isActive && smoothing.activeMode == "tcp5axis"; // setSmoothing(false) writes M289 for this case
-  var needModeBOff = wasTCP || smoothing.tcpInLinkMove || smoothing.commandMode == "tcp5axis";
-  smoothing.force = true;
-  setSmoothing(false);
-  if (needModeBOff && !modeBWasOn) {
-    writeSmoothingBlock([mFormat.format(289)], getSmoothingDescription("tcp5axis", false, -1)); // mode B off before any A/C move
-  }
-  if (!atProgramEnd) {
-    onCommand(COMMAND_STOP_SPINDLE);
-  }
-  // level the table at Z home BEFORE moving X/Y (O8000 order: G28 Z, G28 A, then XY)
-  if ((atProgramEnd || getProperty("partAccessLevelTable")) && machineConfiguration.isMultiAxisConfiguration()) {
-    positionABC(new Vector(0, 0, 0), true);
-  }
-  writeComment("PART ACCESS POSITION");
-  forceModals(gMotionModal);
-  writeBlock(gAbsIncModal.format(90), gFormat.format(53), gMotionModal.format(0),
-    "X" + xyzFormat.format(getProperty("partAccessX")), "Y" + xyzFormat.format(getProperty("partAccessY")));
-  forceXYZ(); // next positioning must re-output X/Y
-  if (!atProgramEnd) {
-    forceABC(); // next operation must re-index A/C
-  }
-}
-
-// TWP FORK: rewind spindle/coolant restart (2026-09-25, O1521 - spindle stayed off after the rewind).
-// Under TCP the rewind retract is G100 T__ (writeRetract), which stops the spindle; writeRetract flags
-// forceSpindleSpeed/forceCoolant for a same-tool restart, but only onSection consumed them - the rewind
-// path never did. Restart here: after the rotary index, tool still at Z home, before G68.2/G43.4 re-entry.
-function restartSpindleAfterRewind() {
-  forceSpindleSpeed = true;
-  forceCoolant = true;
-  startSpindle(tool, false);
-  setCoolant(tool.coolant);
-}
-
-function restoreSmoothingAfterRewind() {
-  if (!smoothing.rewindSuspended) {
-    return;
-  }
-  smoothing.rewindSuspended = false;
-  if (smoothing.tcpInLinkMove) {
-    var linkCode = parseInt(getProperty("fiveAxisLinkSmoothing"), 10);
-    if (linkCode == 284) {
-      writeSmoothingBlock([mFormat.format(284)], getSmoothingDescription("tcp5axis", true, 284));
-    }
-  } else if (smoothing.isActive) {
-    outputSmoothingCommand(true, smoothing.activeMode, smoothing.level);
-  }
 }
 
 function printProbeResults() {
   return ((currentSection.getParameter("printResults", 0) == 1) && (getProperty("probingType") == "Renishaw"));
 }
 
-// TWP FORK: true from onSection until the end of onSectionEnd. Manual NC Stops arrive between
-// operations (inSection false); M00s the post itself writes mid-operation (manual tool change,
-// inspection commissioning mode) stay in place and do NOT move the table.
-var inSection = false;
-
 function onSection() {
-  inSection = true;
   var forceSectionRestart = optionalSection && !currentSection.isOptional();
   optionalSection = currentSection.isOptional();
-  var toolChange = isToolChangeNeeded("number");
-  var insertToolCall = toolChange || forceSectionRestart;
+  var insertToolCall = isToolChangeNeeded("number") || forceSectionRestart;
   var newWorkOffset = isNewWorkOffset() || forceSectionRestart;
   var newWorkPlane = isNewWorkPlane() || forceSectionRestart || (typeof defineWorkPlane == "function" &&
     Vector.diff(defineWorkPlane(getPreviousSection(), false), defineWorkPlane(currentSection, false)).length > 1e-4);
   initializeSmoothing(); // initialize smoothing mode
 
-  // Check if current section needs TCP (for same-tool transitions from non-TCP)
-  var currentSectionNeedsTCP = isTCPSupportedByOperation(currentSection) && !toolChange;
-  var sameToolTCPEntry = currentSectionNeedsTCP && !insertToolCall;
-  var sameToolAfterTCP = !insertToolCall && state.tcpIsActive;
-  var toolChangeTCPEntry = toolChange && isTCPSupportedByOperation(currentSection) &&
-    (currentSection.isMultiAxis() || currentSection.isOptimizedForMachine());
-
-  if (sameToolTCPEntry || sameToolAfterTCP) {
-    forceSpindleSpeed = true;
-    forceCoolant = true;
-  }
-
-  if (insertToolCall || newWorkOffset || newWorkPlane || smoothing.cancel || state.tcpIsActive || currentSection.isMultiAxis() || currentSectionNeedsTCP) {
+  if (insertToolCall || newWorkOffset || newWorkPlane || smoothing.cancel || state.tcpIsActive || currentSection.isMultiAxis()) {
     if (insertToolCall && !isFirstSection()) {
       onCommand(COMMAND_COOLANT_OFF); // turn off coolant before retract during tool change
       onCommand(COMMAND_STOP_SPINDLE); // stop spindle before retract during tool change
-    } else if (state.tcpIsActive || currentSectionNeedsTCP) {
-      onCommand(COMMAND_COOLANT_OFF); // turn off coolant before home retract when entering or leaving TCP; next section will reissue coolant as needed
     }
     writeRetract(Z); // retract
     disableLengthCompensation();
@@ -769,8 +571,8 @@ function onSection() {
       }
       forceABC();
     } else {
-      if (insertToolCall || newWorkPlane || currentSectionNeedsTCP) {
-        cancelWorkPlane(currentSectionNeedsTCP); // force G69 output for TCP transitions
+      if (insertToolCall || newWorkPlane) {
+        cancelWorkPlane();
       }
       if (insertToolCall || smoothing.cancel) {
         setSmoothing(false);
@@ -803,15 +605,10 @@ function onSection() {
     // G100 tool call macro does handle retract, initial positioning XYZABC and starts the spindle
     state.retractedZ = true;
     writeToolCall(tool, insertToolCall);
-    if (toolChangeTCPEntry) {
-      startSpindle(tool, insertToolCall);
-    }
     formatWords(gPlaneModal.format(17), gAbsIncModal.format(90), gFeedModeModal.format(94)); // re-apply modal format
   } else {
     defineWorkPlane(currentSection, true);
-    if (!sameToolTCPEntry) {
-      startSpindle(tool, insertToolCall);
-    }
+    startSpindle(tool, insertToolCall);
   }
   // write parametric feedrate table
   if (typeof initializeParametricFeeds == "function") {
@@ -825,35 +622,20 @@ function onSection() {
 
   setProbeAngle(); // output probe angle rotations if required
 
-  if (!sameToolTCPEntry) {
-    setCoolant(tool.coolant); // writes the required coolant codes
-    // add dwell for through coolant if needed
-    if (tool.coolant == COOLANT_THROUGH_TOOL || tool.coolant == COOLANT_AIR_THROUGH_TOOL || tool.coolant == COOLANT_FLOOD_THROUGH_TOOL) {
-      if (isFirstSection()) {
+  setCoolant(tool.coolant); // writes the required coolant codes
+  // add dwell for through coolant if needed
+  if (tool.coolant == COOLANT_THROUGH_TOOL || tool.coolant == COOLANT_AIR_THROUGH_TOOL || tool.coolant == COOLANT_FLOOD_THROUGH_TOOL) {
+    if (isFirstSection()) {
+      onDwell(1);
+    } else {
+      var lastCoolant = getPreviousSection().getTool().coolant;
+      if (!(lastCoolant == COOLANT_THROUGH_TOOL || lastCoolant == COOLANT_AIR_THROUGH_TOOL || lastCoolant == COOLANT_FLOOD_THROUGH_TOOL)) {
         onDwell(1);
-      } else {
-        var lastCoolant = getPreviousSection().getTool().coolant;
-        if (!(lastCoolant == COOLANT_THROUGH_TOOL || lastCoolant == COOLANT_AIR_THROUGH_TOOL || lastCoolant == COOLANT_FLOOD_THROUGH_TOOL)) {
-          onDwell(1);
-        }
       }
     }
   }
 
-  // TWP FORK: widen the pre-TCP smoothing cancel to ANY section entering TCP (3+2
-  // optimized-for-machine included, not just simultaneous multiaxis) - G43.4 with
-  // M298 machining mode modal alarms SM4125 "TCP control command not possible (M298)"
-  var sectionEntersTCP = isTCPSupportedByOperation(currentSection) &&
-    (currentSection.isMultiAxis() || currentSection.isOptimizedForMachine());
-  if (sectionEntersTCP && !state.tcpIsActive) {
-    setSmoothing(false); // cancel any previously active non-TCP smoothing before entering TCP setup
-    writeSmoothingBlock([mFormat.format(299)], getSmoothingDescription("off", false, -1));
-  }
-
-  var deferTcpSmoothing = smoothing.isAllowed && smoothing.commandMode == "tcp5axis";
-  if (!deferTcpSmoothing) {
-    setSmoothing(smoothing.isAllowed);
-  }
+  setSmoothing(smoothing.isAllowed);
 
   if (getProperty("washdownCoolant") == "always") {
     writeBlock(washdownModal.format(tool.type == TOOL_PROBE ? washdownCoolant.off : washdownCoolant.on));
@@ -861,28 +643,14 @@ function onSection() {
 
   // prepositioning
   var initialPosition = getFramePosition(currentSection.getInitialPosition());
-  if (!insertToolCall || toolChangeTCPEntry) { // tool-change TCP entries use standard initial positioning to force G43.4 output
+  if (!insertToolCall) { // G100 tool call macro does handle initial positioning
     var isRequired = state.retractedZ || !state.lengthCompensationActive || (!isFirstSection() && getPreviousSection().isMultiAxis());
-    var sameToolNonTCPtoTCP = !isFirstSection() && !isToolChangeNeeded() && isTCPSupportedByOperation(currentSection) && !state.tcpIsActive;
-    if (toolChangeTCPEntry) {
-      writeInitialPositioning(initialPosition, true);
-      forceAny();
-    } else if (currentSection.isMultiAxis() || (currentSection.isOptimizedForMachine() && isTCPSupportedByOperation(currentSection))) {
+    if (currentSection.isMultiAxis() || (currentSection.isOptimizedForMachine() && isTCPSupportedByOperation(currentSection))) {
       onCommand(COMMAND_LOAD_TOOL);
-      if (sameToolNonTCPtoTCP) {
-        startSpindle(tool, insertToolCall);
-        pendingTCPCoolant = true; // coolant will be output just before G69 in writeInitialPositioning
-        writeInitialPositioning(initialPosition, isRequired);
-        pendingTCPCoolant = false; // clear in case it wasn't consumed
-      }
       forceAny();
     } else {
       writeInitialPositioning(initialPosition, isRequired);
     }
-  }
-
-  if (deferTcpSmoothing) {
-    setSmoothing(smoothing.isAllowed);
   }
 
   // output the Machining Load Monitor code
@@ -1064,7 +832,7 @@ function writeDrillCycle(cycle, x, y, z) {
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-          getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
         );
       } else {
         writeBlock(
@@ -1085,7 +853,7 @@ function writeDrillCycle(cycle, x, y, z) {
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-          getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
         );
       } else {
         writeBlock(
@@ -1106,7 +874,7 @@ function writeDrillCycle(cycle, x, y, z) {
           getCommonCycle(x, y, cycle.bottom, cycle.retract),
           unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
           unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-          getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
+          getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
         );
       } else {
         writeBlock(
@@ -1120,20 +888,24 @@ function writeDrillCycle(cycle, x, y, z) {
     case "tapping-with-chip-breaking":
     case "left-tapping-with-chip-breaking":
     case "right-tapping-with-chip-breaking":
-      if (!F) {
-        F = tool.getTappingFeedrate();
-      }
-      if (getProperty("usePitchForTapping")) {
-        writeBlock(
-          gRetractModal.format(98), gCycleModal.format((tool.type == TOOL_TAP_LEFT_HAND) ? 278 : 277),
-          getCommonCycle(x, y, cycle.bottom, cycle.retract),
-          "Q" + xyzFormat.format(cycle.incrementalDepth),
-          unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
-          unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
-          getProperty("doubleTapWithdrawSpeed") ? "L" + rpmFormat.format(Math.min(spindleSpeed * 2, 6000)) : ""
-        );
-      } else { // G84/G74 does not support chip breaking
-        error(localize("Tapping with chip breaking is not supported by the G74/G84 cycle."));
+      if (cycle.accumulatedDepth < cycle.depth) {
+        error(localize("Accumulated pecking depth is not supported for tapping cycles with chip breaking."));
+      } else {
+        if (!F) {
+          F = tool.getTappingFeedrate();
+        }
+        if (getProperty("usePitchForTapping")) {
+          writeBlock(
+            gRetractModal.format(98), gCycleModal.format((tool.type == TOOL_TAP_LEFT_HAND) ? 78 : 77),
+            getCommonCycle(x, y, cycle.bottom, cycle.retract),
+            "Q" + xyzFormat.format(cycle.incrementalDepth),
+            unit == IN ? "J" + xyzFormat.format(threadsPerInch) : "",
+            unit == MM ? "I" + xyzFormat.format(threadPitch) : "",
+            getProperty("doubleTapWithdrawSpeed") ? "L" + (spindleSpeed * 2 > 6000 ? 6000 : spindleSpeed * 2) : ""
+          );
+        } else { // G84/G74 does not support chip breaking
+          error(localize("Tapping with chip breaking is not supported by the G74/G84 cycle."));
+        }
       }
       break;
     case "fine-boring":
@@ -1783,16 +1555,6 @@ function writeProbeCycle(cycle, x, y, z) {
   }
 }
 
-// TWP FORK: deferred WCS-update state for probing under an active G68.2. The D-00 blocks
-// work offset writes while feature coordinate manufacturing mode is engaged (SM4107), and
-// single-axis cycles with S under G68.2 trip the Renishaw XYZ-error gate (SM9123 / #3000=123).
-// Cycles therefore run geometry-only in-frame and the update is written after G69.
-var twpWcsUpdate = {pending:false, sCode:undefined};
-function isTWPProbingActive() {
-  return getSetting("workPlaneMethod.useTiltedWorkplane", false) &&
-    typeof gRotationModal != "undefined" && gRotationModal.getCurrent() == 68.2;
-}
-
 function getProbingArguments(cycle, updateWCS) {
   var outputWCSCode = updateWCS && currentSection.strategy == "probe";
   var probeOutputWorkOffset = currentSection.probeWorkOffset;
@@ -1804,13 +1566,6 @@ function getProbingArguments(cycle, updateWCS) {
     }
   }
   if (getProperty("probingType") == "Renishaw") {
-    var twpSCode = "S" + probeWCSFormat.format(probeOutputWorkOffset > 6 ? (probeOutputWorkOffset - 6 + 100) : (probeOutputWorkOffset + 53));
-    if (outputWCSCode && isTWPProbingActive()) {
-      // TWP FORK: suppress the in-cycle S and defer the offset write to section end
-      twpWcsUpdate.pending = true;
-      twpWcsUpdate.sCode = twpSCode;
-      outputWCSCode = false;
-    }
     return [
       (cycle.angleAskewAction == "stop-message" ? "B" + xyzFormat.format(cycle.toleranceAngle ? cycle.toleranceAngle : 0) : undefined),
       ((cycle.updateToolWear && cycle.toolWearErrorCorrection < 100) ? "F" + xyzFormat.format(cycle.toolWearErrorCorrection ? cycle.toolWearErrorCorrection / 100 : 100) : undefined),
@@ -1820,7 +1575,7 @@ function getProbingArguments(cycle, updateWCS) {
       ((cycle.updateToolWear && cycleType !== "probing-z") ? "T" + xyzFormat.format(cycle.toolDiameterOffset) : undefined),
       (cycle.updateToolWear ? "V" + xyzFormat.format(cycle.toolWearUpdateThreshold ? cycle.toolWearUpdateThreshold : 0) : undefined),
       (cycle.printResults ? "W" + xyzFormat.format(1 + cycle.incrementComponent) : undefined), // 1 for advance feature, 2 for reset feature count and advance component number. first reported result in a program should use W2.
-      conditional(outputWCSCode, twpSCode)
+      conditional(outputWCSCode, "S" + probeWCSFormat.format(probeOutputWorkOffset > 6 ? (probeOutputWorkOffset - 6 + 100) : probeOutputWorkOffset))
     ];
   } else {
     return [
@@ -1861,9 +1616,6 @@ function onCommand(command) {
     setCoolant(tool.coolant);
     return;
   case COMMAND_STOP:
-    if (getProperty("partAccessOnStop") && !inSection) {
-      moveToPartAccess(false); // TWP FORK: Manual NC Stop between operations - bring the table to the door
-    }
     writeBlock(mFormat.format(0));
     forceSpindleSpeed = true;
     forceCoolant = true;
@@ -1886,39 +1638,24 @@ function onCommand(command) {
     var abc = settings.workPlaneMethod.useTiltedWorkplane ? undefined : defineWorkPlane(currentSection, false);
     var start = getFramePosition(currentSection.getInitialPosition());
     var preloadTool = getNextTool(tool.number != getFirstTool().number);
-    // For TCP entries that use writeInitialPositioning, output bare G100 only (no coordinates/offset code)
-    var isSameToolNonTCPtoTCP = tcp.isSupportedByOperation && !state.tcpIsActive && 
-      !isFirstSection() && !isToolChangeNeeded() && isTCPSupportedByOperation(currentSection);
-    var isToolChangeTCPEntry = isToolChangeNeeded("number") && tcp.isSupportedByOperation &&
-      (currentSection.isMultiAxis() || currentSection.isOptimizedForMachine());
-    
-    if (isSameToolNonTCPtoTCP || isToolChangeTCPEntry) {
-      writeBlock(gFormat.format(100), "T" + toolFormat.format(tool.number));
-      if (isToolChangeTCPEntry) {
-        // TWP FORK: bare G100 bypasses writeToolBlock, so machine simulation never saw the tool change
-        // ("Tool-change instruction missing" / "Connection without a tool"). Simulation-only - NC output unchanged.
-        machineSimulation({mode:TOOLCHANGE});
-      }
-    } else {
-      writeToolBlock(gFormat.format(100),
-        "T" + toolFormat.format(tool.number),
-        xOutput.format(start.x),
-        yOutput.format(start.y),
-        getOffsetCode(),
-        zOutput.format(start.z),
-        abc ? aOutput.format(abc.x) : undefined,
-        abc ? bOutput.format(abc.y) : undefined,
-        abc ? cOutput.format(abc.z) : undefined,
-        (getProperty("preloadTool") && preloadTool) ? "L" + toolFormat.format(preloadTool.number) : undefined,
-        hFormat.format(tool.lengthOffset),
-        tool.type != TOOL_PROBE ? diameterOffsetFormat.format(tool.diameterOffset) : "",
-        tool.type != TOOL_PROBE ? sOutput.format(spindleSpeed) : "",
-        tool.type != TOOL_PROBE ? mFormat.format(tool.clockwise ? 3 : 4) : ""
-      );
-    }
+    writeToolBlock(gFormat.format(100),
+      "T" + toolFormat.format(tool.number),
+      xOutput.format(start.x),
+      yOutput.format(start.y),
+      getOffsetCode(),
+      zOutput.format(start.z),
+      abc ? aOutput.format(abc.x) : undefined,
+      abc ? bOutput.format(abc.y) : undefined,
+      abc ? cOutput.format(abc.z) : undefined,
+      (getProperty("preloadTool") && preloadTool) ? "L" + toolFormat.format(preloadTool.number) : undefined,
+      hFormat.format(tool.lengthOffset),
+      tool.type != TOOL_PROBE ? diameterOffsetFormat.format(tool.diameterOffset) : "",
+      tool.type != TOOL_PROBE ? sOutput.format(spindleSpeed) : "",
+      tool.type != TOOL_PROBE ? mFormat.format(tool.clockwise ? 3 : 4) : ""
+    );
     writeComment(tool.comment);
     currentWorkPlaneABC = abc ? abc : currentWorkPlaneABC; // workplane is set with the G100 command
-    forceSpindleSpeed = isSameToolNonTCPtoTCP || isToolChangeTCPEntry;
+    forceSpindleSpeed = false;
 
     // for machine simulation, with TCP enabled G100 acts like prepositionWithTWP
     if (abc != undefined) {
@@ -1971,16 +1708,6 @@ function onCommand(command) {
   case COMMAND_STOP_CHIP_TRANSPORT:
     return;
   case COMMAND_BREAK_CONTROL:
-    onCommand(COMMAND_COOLANT_OFF);
-    writeRetract(Z); // outputs G28 G91 Z0 + G90 with current retract settings
-    disableLengthCompensation(true); // force G49 output
-    cancelWorkPlane(true); // force G69 output
-    smoothing.force = true;
-    setSmoothing(false); // force smoothing-off code (M289 in mode B)
-    writeComment("PERFORMING TOOL BREAK DETECTION");
-    onCommand(COMMAND_STOP_SPINDLE);
-    writeBlock(mFormat.format(98), "P8000");
-    onCommand(COMMAND_STOP_SPINDLE); // enforce M05 directly after break-check macro call
     return;
   case COMMAND_TOOL_MEASURE:
     return;
@@ -2000,12 +1727,6 @@ function onCommand(command) {
 }
 
 function onSectionEnd() {
-  if (smoothing.tcpInLinkMove) {
-    smoothing.tcpInLinkMove = false;
-    if (smoothing.commandMode == "tcp5axis" && smoothing.level != -1) {
-      writeBlock(mFormat.format(smoothing.level));
-    }
-  }
   if (currentSection.isMultiAxis()) {
     writeBlock(gFeedModeModal.format(94)); // inverse time feed off
   }
@@ -2013,12 +1734,6 @@ function onSectionEnd() {
     writeBlock(getProperty("commissioningMode") ? onCommand(COMMAND_STOP) : "");
   }
   writeBlock(gPlaneModal.format(17));
-
-  // Output G43 before retract when transitioning from non-TCP to TCP on same tool to prevent SM4124 alarm
-  if (!isLastSection() && !state.tcpIsActive && isTCPSupportedByOperation(getNextSection()) && 
-      !isToolChangeNeeded(getNextSection(), getProperty("toolAsName") ? "description" : "number")) {
-    writeBlock(toolLengthCompOutput.format(43)); // standard comp before retract
-  }
 
   if (tool.type != TOOL_PROBE && getProperty("washdownCoolant") == "operationEnd") {
     writeBlock(washdownModal.format(washdownCoolant.on));
@@ -2034,28 +1749,9 @@ function onSectionEnd() {
   }
   if (isProbeOperation()) {
     if (getProperty("probingType") == "Renishaw") {
-      if (twpWcsUpdate.pending) {
-        // TWP FORK: convert banked errors #151/#152/#153 to machine-frame deltas
-        // #140/#141/#142 - O8744 must run while G68.2 is STILL ACTIVE (does a
-        // +/-1mm X/Y identity test move at the current position)
-        writeComment("TWP WCS UPDATE - FCS TO WCS CONVERSION");
-        writeBlock(settings.probing.macroCall, "P" + 8744);
-      }
       writeBlock(settings.probing.macroCall, "P" + 8833); // spin the probe off
       if (probeVariables.probeAngleMethod != "G68") {
         setProbeAngle(); // output probe angle rotations if required
-      }
-      if (twpWcsUpdate.pending) {
-        // TWP FORK: the D-00 only accepts the work offset write OUTSIDE the tilted
-        // frame - retract, cancel G43 then G69, then write via O8732 (W1.=work
-        // offset mode, Z1. enables the Z component write)
-        writeRetract(Z);
-        disableLengthCompensation(true);
-        cancelWorkPlane(true);
-        writeComment("TWP WCS UPDATE - OFFSET WRITE");
-        writeBlock(settings.probing.macroCall, "P" + 8732, twpWcsUpdate.sCode, "W1.", "Z1.");
-        twpWcsUpdate.pending = false;
-        twpWcsUpdate.sCode = undefined;
       }
     }
   }
@@ -2064,7 +1760,6 @@ function onSectionEnd() {
   }
   forceAny();
   setAllowedCircularPlanes(currentSection.getId());
-  inSection = false; // TWP FORK: see inSection
 }
 
 function setAllowedCircularPlanes(sectionId) {
@@ -2086,14 +1781,6 @@ function writeRetract() {
     }
     if (retract.retractAxes[2] && state.tcpIsActive) {
       writeBlock(gFormat.format(100), "T" + toolFormat.format(currentToolNumber));
-      forceModals(gAbsIncModal);
-      writeBlock(gAbsIncModal.format(90));
-      var currentSectionNeedsSameToolRestart = (typeof currentSection != "undefined") && !isFirstSection() &&
-        !isToolChangeNeeded(getProperty("toolAsName") ? "description" : "number");
-      if (currentSectionNeedsSameToolRestart) {
-        forceSpindleSpeed = true;
-        forceCoolant = true;
-      }
       machineSimulation({mode:RETRACTTOOLAXIS});
       return;
     }
@@ -2156,9 +1843,7 @@ function onClose() {
 
   var firstToolNumber = getSection(0).getTool().number;
   writeBlock(gFormat.format(100), "T" + toolFormat.format(firstToolNumber));
-  if (getProperty("partAccessOnProgramEnd")) {
-    moveToPartAccess(true); // TWP FORK: table to the door instead of machine X0 Y0
-  } else if (getSetting("retract.homeXY.onProgramEnd", false)) {
+  if (getSetting("retract.homeXY.onProgramEnd", false)) {
     writeRetract(settings.retract.homeXY.onProgramEnd);
   }
   setSmoothing(false);
@@ -3178,7 +2863,6 @@ var currentCoolantMode = COOLANT_OFF;
 var coolantOff = undefined;
 var isOptionalCoolant = false;
 var forceCoolant = false;
-var pendingTCPCoolant = false; // deferred coolant for same-tool non-TCP to TCP transitions
 
 function setCoolant(coolant) {
   var coolantCodes = getCoolantCodes(coolant);
@@ -3292,106 +2976,13 @@ var smoothing = {
   isDifferent: false, // tells if smoothing levels/tolerances/both are different between operations
   level      : -1, // the active level of smoothing
   tolerance  : -1, // the current operation tolerance
-  force      : false, // smoothing needs to be forced out in this operation
-  commandMode: undefined, // smoothing command family for the current section
-  activeMode : undefined, // smoothing command family currently active on the control
-  tcpInLinkMove: false, // simultaneous 5-axis TCP section is temporarily using link-move smoothing
-  rewindSuspended: false // TWP FORK: true only between the rewind G49 and the rewind G43.4 re-entry
+  force      : false // smoothing needs to be forced out in this operation
 };
-
-function isSimultaneousTCPSection(_section) {
-  return !!_section && _section.isMultiAxis() && isTCPSupportedByOperation(_section);
-}
-
-function getSmoothingDescription(commandMode, mode, level) {
-  if (!mode) {
-    switch (commandMode) {
-    case "off":
-      return "SMOOTHING OFF";
-    case "tcp5axis":
-      return "5-AXIS TCP SMOOTHING OFF";
-    default:
-      return "HIGH ACCURACY MODE OFF";
-    }
-  }
-
-  switch (commandMode) {
-  case "A":
-  case "B":
-  case "M298":
-  default:
-    switch (level) {
-    case 0:
-      return "HIGH ACCURACY STANDARD";
-    case 1:
-      return "HIGH ACCURACY ROUGHING";
-    case 2:
-      return "HIGH ACCURACY MEDIUM ROUGH";
-    case 3:
-      return "HIGH ACCURACY MEDIUM ROUGH HIGH";
-    case 4:
-      return "HIGH ACCURACY FINISHING";
-    case 5:
-      return "HIGH ACCURACY FINISHING HIGH";
-    default:
-      return "HIGH ACCURACY MODE";
-    }
-  case "tcp5axis":
-    switch (level) {
-    case 280:
-      return "5-AXIS TCP SMOOTHING M280 STANDARD GENERAL USE";
-    case 281:
-      return "5-AXIS TCP SMOOTHING M281 VERY ACCURATE PATH ACCURACY LIMITED SMOOTHING";
-    case 282:
-      return "5-AXIS TCP SMOOTHING M282 VERY HIGH PATH ACCURACY MORE SMOOTHING";
-    case 283:
-      return "5-AXIS TCP SMOOTHING M283 HIGHEST PATH ACCURACY LIMITED SMOOTHING";
-    case 284:
-      return "5-AXIS TCP SMOOTHING M284 ROUGHING TRANSITION PATHS";
-    case 285:
-      return "5-AXIS TCP SMOOTHING M285 CUSTOM DEBURR CUTTING";
-    default:
-      return "5-AXIS TCP SMOOTHING";
-    }
-  }
-}
-
-function writeSmoothingBlock(words, description) {
-  var outputWords = words.slice(0);
-  if (getProperty("showSmoothingAnnotations") && description) {
-    outputWords.push(formatComment(description));
-  }
-  writeBlock.apply(null, outputWords);
-}
-
-function outputSmoothingCommand(mode, commandMode, level) {
-  var mappedLevel = (level >= 0 && level <= 5) ? [0, 5, 3, 4, 1, 2][level] : level;
-  var description = getSmoothingDescription(commandMode, mode, level);
-  switch (commandMode) {
-  case "A":
-    writeSmoothingBlock([mFormat.format(mode ? 260 + mappedLevel : 269)], description);
-    break;
-  case "B":
-    writeSmoothingBlock([mFormat.format(mode ? 280 + mappedLevel : 289)], description);
-    break;
-  case "tcp5axis":
-    writeSmoothingBlock([mFormat.format(mode ? level : 289)], description);
-    break;
-  case "off":
-    writeSmoothingBlock([mFormat.format(299)], description);
-    break;
-  default:
-    writeSmoothingBlock([mFormat.format(298), mode ? "L" + level : "L0"], description);
-    break;
-  }
-}
 
 function initializeSmoothing() {
   var smoothingSettings = settings.smoothing;
   var previousLevel = smoothing.level;
   var previousTolerance = xyzFormat.getResultingValue(smoothing.tolerance);
-  var previousCommandMode = smoothing.commandMode;
-  var isTcp5AxisSection = isSimultaneousTCPSection(currentSection);
 
   // format threshold parameters
   var thresholdRoughing = xyzFormat.getResultingValue(smoothingSettings.thresholdRoughing);
@@ -3399,43 +2990,12 @@ function initializeSmoothing() {
   var thresholdFinishing = xyzFormat.getResultingValue(smoothingSettings.thresholdFinishing);
 
   // determine new smoothing levels and tolerances
-  smoothing.commandMode = isTcp5AxisSection ? "tcp5axis" : getProperty("smoothingMode");
-  smoothing.level = parseInt(isTcp5AxisSection ? getProperty("fiveAxisSmoothing") : getProperty("useSmoothing"), 10);
+  smoothing.level = parseInt(getProperty("useSmoothing"), 10);
   smoothing.level = isNaN(smoothing.level) ? -1 : smoothing.level;
   smoothing.tolerance = xyzFormat.getResultingValue(Math.max(getParameter("operation:tolerance", thresholdFinishing), 0));
 
-  if (smoothing.commandMode == "off") {
-    smoothing.level = -1;
-  }
-
   if (smoothing.level == 9999) {
-    if (isTcp5AxisSection) {
-      if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
-        var stockToLeaveTcp = xyzFormat.getResultingValue(getParameter("operation:stockToLeave", getParameter("operation:verticalStockToLeave", 0)));
-        var verticalStockToLeaveTcp = xyzFormat.getResultingValue(getParameter("operation:verticalStockToLeave", stockToLeaveTcp));
-        if (((stockToLeaveTcp >= thresholdRoughing) && (verticalStockToLeaveTcp >= thresholdRoughing)) || getParameter("operation:strategy", "") == "face") {
-          smoothing.level = smoothingSettings.roughingTcp;
-        } else if (((stockToLeaveTcp >= thresholdSemiFinishing) && (stockToLeaveTcp < thresholdRoughing)) &&
-          ((verticalStockToLeaveTcp >= thresholdSemiFinishing) && (verticalStockToLeaveTcp < thresholdRoughing))) {
-          smoothing.level = smoothingSettings.semiTcp;
-        } else if (((stockToLeaveTcp >= thresholdFinishing) && (stockToLeaveTcp < thresholdSemiFinishing)) &&
-          ((verticalStockToLeaveTcp >= thresholdFinishing) && (verticalStockToLeaveTcp < thresholdSemiFinishing))) {
-          smoothing.level = smoothingSettings.semifinishingTcp;
-        } else {
-          smoothing.level = smoothingSettings.finishingTcp;
-        }
-      } else {
-        if (smoothing.tolerance >= thresholdRoughing || getParameter("operation:strategy", "") == "face") {
-          smoothing.level = smoothingSettings.roughingTcp;
-        } else if ((smoothing.tolerance >= thresholdSemiFinishing) && (smoothing.tolerance < thresholdRoughing)) {
-          smoothing.level = smoothingSettings.semiTcp;
-        } else if ((smoothing.tolerance >= thresholdFinishing) && (smoothing.tolerance < thresholdSemiFinishing)) {
-          smoothing.level = smoothingSettings.semifinishingTcp;
-        } else {
-          smoothing.level = smoothingSettings.finishingTcp;
-        }
-      }
-    } else if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
+    if (smoothingSettings.autoLevelCriteria == "stock") { // determine auto smoothing level based on stockToLeave
       var stockToLeave = xyzFormat.getResultingValue(getParameter("operation:stockToLeave", getParameter("operation:verticalStockToLeave", 0)));
       var verticalStockToLeave = xyzFormat.getResultingValue(getParameter("operation:verticalStockToLeave", stockToLeave));
       if (((stockToLeave >= thresholdRoughing) && (verticalStockToLeave >= thresholdRoughing)) || getParameter("operation:strategy", "") == "face") {
@@ -3478,13 +3038,13 @@ function initializeSmoothing() {
 
   switch (smoothingSettings.differenceCriteria) {
   case "level":
-    smoothing.isDifferent = smoothing.level != previousLevel || smoothing.commandMode != previousCommandMode;
+    smoothing.isDifferent = smoothing.level != previousLevel;
     break;
   case "tolerance":
-    smoothing.isDifferent = smoothing.tolerance != previousTolerance || smoothing.commandMode != previousCommandMode;
+    smoothing.isDifferent = smoothing.tolerance != previousTolerance;
     break;
   case "both":
-    smoothing.isDifferent = smoothing.level != previousLevel || smoothing.tolerance != previousTolerance || smoothing.commandMode != previousCommandMode;
+    smoothing.isDifferent = smoothing.level != previousLevel || smoothing.tolerance != previousTolerance;
     break;
   default:
     error(localize("Unsupported smoothing criteria."));
@@ -3631,11 +3191,6 @@ function onRapid5D(_x, _y, _z, _a, _b, _c) {
     error(localize("Radius compensation mode cannot be changed at rapid traversal."));
     return;
   }
-  var isTcp5AxisSection = isSimultaneousTCPSection(currentSection);
-  // TWP FORK: the rewind rotary index (onRotateAxes) posts as G00 - it is the ONLY rapid-while-suspended move.
-  // All normal TCP link moves still post as high-feed G01 (rapids under TCP stop at every block).
-  var useHighFeedLinkMove = isTcp5AxisSection && isTcpLinkMove() && !smoothing.rewindSuspended;
-  manageTcpLinkSmoothing(useHighFeedLinkMove);
   if (!currentSection.isOptimizedForMachine()) {
     forceXYZ();
   }
@@ -3647,12 +3202,7 @@ function onRapid5D(_x, _y, _z, _a, _b, _c) {
   var c = currentSection.isOptimizedForMachine() ? cOutput.format(_c) : toolVectorOutputK.format(_c);
 
   if (x || y || z || a || b || c) {
-    if (useHighFeedLinkMove) {
-      forceFeed();
-      writeBlock(gFeedModeModal.format(getProperty("useG95") ? 95 : 94), gMotionModal.format(1), x, y, z, a, b, c, getFeed(highFeedrate));
-    } else {
-      writeBlock(gMotionModal.format(0), x, y, z, a, b, c);
-    }
+    writeBlock(gMotionModal.format(0), x, y, z, a, b, c);
     forceFeed();
   }
 }
@@ -3663,7 +3213,6 @@ function onLinear5D(_x, _y, _z, _a, _b, _c, feed, feedMode) {
     error(localize("Radius compensation cannot be activated/deactivated for 5-axis move."));
     return;
   }
-  manageTcpLinkSmoothing(isSimultaneousTCPSection(currentSection) && isTcpLinkMove());
   if (!currentSection.isOptimizedForMachine()) {
     forceXYZ();
   }
@@ -3796,14 +3345,6 @@ function cancelWorkPlane(force) {
     }
     var command = gRotationModal.format(69);
     if (command) {
-      // TWP FORK: the D-00 alarms (SM4106 Feature coordinate command error) if G69 is
-      // commanded while tool length compensation is still active - cancel G43 first
-      if (state.lengthCompensationActive && typeof disableLengthCompensation == "function") {
-        if (!state.retractedZ) {
-          writeRetract(Z);
-        }
-        disableLengthCompensation(true);
-      }
       writeBlock(command); // cancel frame
       forceWorkPlane();
     }
@@ -3950,10 +3491,9 @@ function writeInitialPositioning(position, isRequired, codes1, codes2) {
         setWorkPlane(angles);
         writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(prePosition.x), yOutput.format(prePosition.y), feed, additionalCodes[0]);
         machineSimulation({x:prePosition.x, y:prePosition.y});
-        if (pendingTCPCoolant) { setCoolant(tool.coolant); pendingTCPCoolant = false; } // emit coolant just before G69
         cancelWorkPlane();
-        writeBlock(modalCodes, gMotionModal.format(motionCode.single), getOffsetCode(), xOutput.format(position.x), yOutput.format(position.y), zOutput.format(position.z), hOffset, additionalCodes[1]);
-        machineSimulation({x:position.x, y:position.y, z:position.z});
+        writeBlock(getOffsetCode(), hOffset, additionalCodes[1]); // omit Z-axis output is desired
+        forceAny(); // required to output XYZ coordinates in the following line
       } else {
         writeBlock(modalCodes, gMotionModal.format(motionCode.multi), xOutput.format(position.x), yOutput.format(position.y), feed, additionalCodes[0]);
         machineSimulation({x:position.x, y:position.y});
@@ -4043,7 +3583,6 @@ function onMoveToSafeRetractPosition() {
       disableLengthCompensation(false);
     }
   }
-  suspendSmoothingForRewind(); // TWP FORK: M289 before the rotary index (SM4039.004)
   writeRetract(Z);
   if (getSetting("retract.homeXY.onIndexing", false)) {
     writeRetract(settings.retract.homeXY.onIndexing);
@@ -4070,10 +3609,8 @@ function onRotateAxes(_x, _y, _z, _a, _b, _c) {
 
 /** Return from safe position after indexing rotaries. */
 function onReturnFromSafeRetractPosition(_x, _y, _z) {
-  restartSpindleAfterRewind(); // TWP FORK: the rewind retract G100 T__ stops the spindle - restart at Z home before re-entry
   if (!machineConfiguration.isHeadConfiguration()) {
     writeInitialPositioning(new Vector(_x, _y, _z), true);
-    restoreSmoothingAfterRewind(); // TWP FORK: after G43.4 - same placement as section-entry TCP smoothing
     if (highFeedMapping != HIGH_FEED_NO_MAPPING) {
       onLinear5D(_x, _y, _z, getCurrentDirection().x, getCurrentDirection().y, getCurrentDirection().z, highFeedrate);
     } else {
@@ -4088,7 +3625,6 @@ function onReturnFromSafeRetractPosition(_x, _y, _z) {
         writeBlock(getOffsetCode(), hFormat.format(tool.lengthOffset));
       }
     }
-    restoreSmoothingAfterRewind(); // TWP FORK: after TCP re-enable
     forceXYZ();
     xOutput.reset();
     yOutput.reset();
@@ -4391,3 +3927,680 @@ function setProbeAngleMethod() {
   probeVariables.outputRotationCodes = true;
 }
 // <<<<< INCLUDED FROM include_files/setProbeAngleMethod.cpi
+// <<<<< INCLUDED FROM generic_posts/brother speedio.cps
+
+capabilities |= CAPABILITY_INSPECTION;
+description += " Inspection";
+longDescription += " This post processor has Inspection capabilities.";
+
+// >>>>> INCLUDED FROM inspection/common/fanuc base inspection properties.cps
+properties.probeCalibrationMethod = {
+  title      : "Probe calibration Method",
+  description: "Select the probe calibration method",
+  group      : "probing",
+  type       : "enum",
+  values     : [
+    {id:"Renishaw", title:"Renishaw"},
+    {id:"Autodesk", title:"Autodesk"},
+    {id:"Other", title:"Other"}
+  ],
+  value: "Renishaw",
+  scope: "post"
+};
+properties.toolOffsetType = {
+  title      : "Tool offset type",
+  description: "Select the which offsets are available on the tool offset page",
+  group      : "probing",
+  type       : "enum",
+  values     : [
+    {id:"geomWear", title:"Geometry & Wear"},
+    {id:"geomOnly", title:"Geometry only"}
+  ],
+  value: "geomOnly",
+  scope: "post"
+};
+properties.commissioningMode = {
+  title      : "Commissioning Mode",
+  description: "Enables commissioning mode where M0 and messages are output at key points in the program",
+  group      : "probing",
+  type       : "boolean",
+  value      : true,
+  scope      : "post"
+};
+properties.probeOnCommand = {
+  title      : "Probe On Command",
+  description: "The command used to turn the probe on, this can be a M code or sub program call",
+  group      : "probing",
+  type       : "string",
+  value      : "",
+  scope      : "post"
+};
+properties.probeOffCommand = {
+  title      : "Probe Off Command",
+  description: "The command used to turn the probe off, this can be a M code or sub program call",
+  group      : "probing",
+  type       : "string",
+  value      : "",
+  scope      : "post"
+};
+properties.probeCalibratedRadius = {
+  title      : "Calibrated Radius",
+  description: "Macro Variable used for storing probe calibrated radi",
+  group      : "probing",
+  type       : "integer",
+  value      : 0,
+  scope      : "post"
+};
+properties.probeEccentricityX = {
+  title      : "Eccentricity X",
+  description: "Macro Variable used for storing the X eccentricity",
+  group      : "probing",
+  type       : "integer",
+  value      : 0,
+  scope      : "post"
+};
+properties.probeEccentricityY = {
+  title      : "Eccentricity Y",
+  description: "Macro Variable used for storing the Y eccentricity",
+  group      : "probing",
+  type       : "integer",
+  value      : 0,
+  scope      : "post"
+};
+
+// inspection variables
+var inspectionVariables = {
+  localVariablePrefix            : "#",
+  probeRadius                    : 0,
+  systemVariableMeasuredX        : 5061,
+  systemVariableMeasuredY        : 5062,
+  systemVariableMeasuredZ        : 5063,
+  pointNumber                    : 1,
+  probeResultsBufferFull         : false,
+  probeResultsBufferIndex        : 1,
+  hasInspectionSections          : false,
+  inspectionSectionCount         : 0,
+  systemVariableOffsetLengthTable: 2000,
+  systemVariableOffsetWearTable  : 2200,
+  systemVariableActiveToolNumber : 4111,
+  workpieceOffset                : "",
+  alternateTriggerCheck          : false,
+  toolLengthParameterCheck       : true,
+  saveSequenceNumbers            : {start:-1, show:undefined, increment:-1},
+  printParameterCheck            : true,
+  userAlarm                      : "#3000 = 91",
+  userMessage                    : "#3006 = 91"
+};
+
+// <<<<< INCLUDED FROM inspection/common/fanuc base inspection properties.cps
+// modify default settings
+inspectionVariables.systemVariableMeasuredOffset = {variable:117, value:100};
+inspectionVariables.systemVariableOffsetLengthTable = 11000;
+inspectionVariables.systemVariableOffsetWearTable = 10000;
+inspectionVariables.toolLengthParameterCheck = false;
+inspectionVariables.userMessage = "#3006 =";
+// >>>>> INCLUDED FROM inspection/common/fanuc base inspection.cps
+// code for inspection support
+
+var ijkInspectionFormat = createFormat({decimals:5, type:FORMAT_REAL});
+
+var MEASURE_COMMAND = 31;
+var LINEAR_COMMAND = 1;
+
+function inspectionWriteVariables() {
+  sequenceNumber = sequenceNumber == undefined ? getProperty("sequenceNumberStart") : sequenceNumber;
+  inspectionVariables.saveSequenceNumbers.show = getProperty("showSequenceNumbers", undefined);
+  inspectionVariables.saveSequenceNumbers.increment = getProperty("sequenceNumberIncrement", 1);
+  var count = 1;
+  var prefix = inspectionVariables.localVariablePrefix;
+  inspectionVariables.probeRadius = prefix + count; // #1
+  inspectionVariables.xTarget = prefix + ++count;
+  inspectionVariables.yTarget = prefix + ++count;
+  inspectionVariables.zTarget = prefix + ++count;
+  inspectionVariables.xMeasured = prefix + ++count;
+  inspectionVariables.yMeasured = prefix + ++count;
+  inspectionVariables.zMeasured = prefix + ++count;
+  inspectionVariables.activeToolLength = prefix + ++count;
+  inspectionVariables.macroVariable1 = prefix + ++count;
+  inspectionVariables.macroVariable2 = prefix + ++count;
+  inspectionVariables.macroVariable3 = prefix + ++count;
+  inspectionVariables.macroVariable4 = prefix + ++count;
+  inspectionVariables.macroVariable5 = prefix + ++count;
+  inspectionVariables.macroVariable6 = prefix + ++count;
+  inspectionVariables.macroVariable7 = prefix + ++count;
+  // set Buffer Variable
+
+  // loop through all NC stream sections to check for inspection operations
+  for (var i = 0; i < getNumberOfSections(); ++i) {
+    var section = getSection(i);
+    if (isInspectionOperation(section)) {
+      inspectionVariables.workpieceOffset = section.workOffset;
+      inspectionVariables.hasInspectionSections = true;
+      inspectionValidateInspectionSettings();
+      if (!getProperty("useLiveConnection") && getProperty("commissioningMode")) {
+        writeBlock(inspectionVariables.userMessage, formatComment("PROPERTY_" +
+          String(properties.commissioningMode.title).replace(/ /g, "_").toUpperCase() +
+          "_IS_ENABLED"));
+        writeComment("When the machine is measuring correctly please disable this property");
+      }
+      if (inspectionVariables.systemVariableMeasuredOffset) {
+        cancelWorkPlane(true); // force G69 to be output, required for inspection since the NC program contains code to identify the current state of the active workplane/transformation
+      }
+      break;
+    }
+  }
+
+  if (getProperty("useLiveConnection") || inspectionVariables.hasInspectionSections) {
+    var overriddenProperties = "";
+    if (getProperty("showSequenceNumbers") != "true") {
+      setProperty("showSequenceNumbers", "true"); // force sequence numbers to be output, required for GOTO statement usage
+      overriddenProperties += EOL + " -'" + properties.showSequenceNumbers.title + "'";
+    }
+    if (getProperty("sequenceNumberIncrement") != 1) {
+      setProperty("sequenceNumberIncrement", 1); // set sequenceNumberIncrement to 1 to prevent exceeding maximumSequenceNumber
+      overriddenProperties += EOL + " -'" + properties.sequenceNumberIncrement.title + "'";
+    }
+    if (overriddenProperties != "") {
+      warning("The following properties are overridden for live connection and/or inspection operations:" + overriddenProperties);
+    }
+    if (getProperty("useLiveConnection")) {
+      liveConnectionHeader(count);
+    }
+    if (!getProperty("useLiveConnection")) {
+      setProperty("showSequenceNumbers", inspectionVariables.saveSequenceNumbers.show); // reset showSequenceNumbers to previous state
+      setProperty("sequenceNumberIncrement", inspectionVariables.saveSequenceNumbers.increment); // reset sequenceNumberIncrement to previous state
+    }
+  }
+}
+
+function inspectionValidateInspectionSettings() {
+  var errorText = "";
+  if (getProperty("probeOnCommand") == "") {
+    errorText += "\n-Probe On Command-";
+  }
+  if (getProperty("probeOffCommand") == "") {
+    errorText += "\n-Probe Off Command-";
+  }
+  if (getProperty("probeCalibratedRadius") == 0) {
+    errorText += "\n-Calibrated Radius-";
+  }
+  if (getProperty("probeEccentricityX") == 0) {
+    errorText += "\n-Eccentricity X-";
+  }
+  if (getProperty("probeEccentricityY") == 0) {
+    errorText += "\n-Eccentricity Y-";
+  }
+  if (errorText != "") {
+    error(localize("The following properties need to be configured:" + errorText + "\n-Please consult the guide PDF found at https://cam.autodesk.com/hsmposts?p=fanuc_inspection for more information-"));
+  }
+}
+
+function onProbe(status) {
+  if (status) { // probe ON
+    writeBlock(mFormat.format(19));
+    // writeBlock(mFormat.format(184)); // Doosan Allow G01 or G31 move without spindle speed active (M185 to activate)
+    if (getProperty("probeOnCommand").trim().length != 0) {
+      writeBlock(getProperty("probeOnCommand"));  // command for switching the probe on
+    }
+    onDwell(2);
+    if (getProperty("commissioningMode")) {
+      writeBlock(inspectionVariables.userMessage, formatComment("ENSURE_PROBE_IS_ACTIVE"));
+    }
+  } else { // probe OFF
+    if (getProperty("probeOffCommand").trim().length != 0) {
+      writeBlock(getProperty("probeOffCommand")); // command for switching the probe off
+    }
+    onDwell(2);
+    if (getProperty("commissioningMode")) {
+      writeBlock(inspectionVariables.userMessage, formatComment("ENSURE_PROBE_HAS_DEACTIVATED"));
+    }
+  }
+}
+
+function inspectionCycleInspect(cycle, epx, epy, epz) {
+  if (getNumberOfCyclePoints() != 3) {
+    error(localize("Missing Endpoint in Inspection Cycle, check Approach and Retract heights"));
+  }
+  var x = xyzFormat.format(epx);
+  var y = xyzFormat.format(epy);
+  var z = xyzFormat.format(epz);
+  forceFeed(); // ensure feed is always output - just incase.
+  if (currentSection.isMultiAxis() && inspectionVariables.controllerParameterCheck) {
+    writeBlock(inspectionVariables.macroVariable1 + "=PRM[5400,5]");
+    writeBlock("IF [" + inspectionVariables.macroVariable1, "EQ 1] GOTO" + skipNLines(2));
+    writeBlock(inspectionVariables.userAlarm, formatComment("MACHINE_PARAMETER_5400_BIT_5_NEEDS_to_BE_1_FOR_MULTI-AXIS"));
+    writeBlock(" "); // do not remove, required for GOTO functionality
+  }
+  var f;
+  if (isFirstCyclePoint() || isLastCyclePoint()) {
+    f = isFirstCyclePoint() ? cycle.safeFeed : cycle.linkFeed;
+    inspectionCalculateTargetEndpoint(x, y, z);
+    if (isFirstCyclePoint()) {
+      writeComment("Approach Move");
+      inspectionWriteCycleMove(f, MEASURE_COMMAND);
+      inspectionProbeTriggerCheck(false); // not triggered
+    } else {
+      writeComment("Retract Move");
+      inspectionWriteCycleMove(f, LINEAR_COMMAND);
+      forceXYZ();
+    }
+  } else {
+    f = cycle.measureFeed;
+    // var f = 300;
+    inspectionWriteNominalData(cycle);
+    inspectionCalculateTargetEndpoint(x, y, z);
+    writeComment("Measure Move");
+    if (getProperty("commissioningMode") && inspectionVariables.pointNumber == 1) {
+      writeBlock(inspectionVariables.userMessage, formatComment("PROBE_IS_ABOUT_TO_CONTACT_PART_AXES_SHOULD_STOP_ON_CONTACT"));
+    }
+    inspectionWriteCycleMove(f, MEASURE_COMMAND);
+    inspectionProbeTriggerCheck(true); // triggered
+    inspectionCorrectProbeMeasurement();
+    inspectionWriteMeasuredData(cycle);
+  }
+}
+
+function inspectionWriteNominalData(cycle) {
+  var m = getRotation();
+  var v = new Vector(cycle.nominalX, cycle.nominalY, cycle.nominalZ);
+  var vt = m.multiply(v);
+  var pathVector = new Vector(cycle.nominalI, cycle.nominalJ, cycle.nominalK);
+  var nv = m.multiply(pathVector).normalized;
+  cycle.nominalX = vt.x;
+  cycle.nominalY = vt.y;
+  cycle.nominalZ = vt.z;
+  cycle.nominalI = nv.x;
+  cycle.nominalJ = nv.y;
+  cycle.nominalK = nv.z;
+  if (getProperty("useLiveConnection")) {
+    return;
+  }
+  writeln(inspectionVariables.xTarget + "=" + xyzFormat.format(cycle.nominalX));
+  writeln(inspectionVariables.yTarget + "=" + xyzFormat.format(cycle.nominalY));
+  writeln(inspectionVariables.zTarget + "=" + xyzFormat.format(cycle.nominalZ));
+  writeln(inspectionVariables.macroVariable1 + "=" + ijkInspectionFormat.format(cycle.nominalI));
+  writeln(inspectionVariables.macroVariable2 + "=" + ijkInspectionFormat.format(cycle.nominalJ));
+  writeln(inspectionVariables.macroVariable3 + "=" + ijkInspectionFormat.format(cycle.nominalK));
+  writeln(inspectionVariables.macroVariable4 + "=" + xyzFormat.format(getParameter("operation:inspectSurfaceOffset")));
+  writeln(inspectionVariables.macroVariable5 + "=" + xyzFormat.format(getParameter("operation:inspectUpperTolerance")));
+  writeln(inspectionVariables.macroVariable6 + "=" + xyzFormat.format(getParameter("operation:inspectLowerTolerance")));
+
+  writeln("DPRNT[G800" +
+    "*N" + inspectionVariables.pointNumber +
+    "*X" + inspectionVariables.xTarget + macroRoundingFormat +
+    "*Y" + inspectionVariables.yTarget + macroRoundingFormat +
+    "*Z" + inspectionVariables.zTarget + macroRoundingFormat +
+    "*I" + inspectionVariables.macroVariable1 + macroRoundingFormat +
+    "*J" + inspectionVariables.macroVariable2 + macroRoundingFormat +
+    "*K" + inspectionVariables.macroVariable3 + macroRoundingFormat +
+    "*O" + inspectionVariables.macroVariable4 + macroRoundingFormat +
+    "*U" + inspectionVariables.macroVariable5 + macroRoundingFormat +
+    "*L" + inspectionVariables.macroVariable6 + macroRoundingFormat +
+    "]"
+  );
+}
+
+function inspectionCalculateTargetEndpoint(x, y, z) {
+  writeComment("CALCULATE TARGET ENDPOINT");
+  writeln(inspectionVariables.xTarget + "=" + x + "-" + macroFormat.format(getProperty("probeEccentricityX")));
+  writeln(inspectionVariables.yTarget + "=" + y + "-" + macroFormat.format(getProperty("probeEccentricityY")));
+  writeln(inspectionVariables.zTarget + "=" + z + "+[" + xyzFormat.format(tool.diameter / 2) + "-" + inspectionVariables.probeRadius + "]");
+}
+
+function inspectionWriteMeasureMove(f) {
+  writeBlock(gFormat.format(31),
+    "X" + inspectionVariables.xTarget,
+    "Y" + inspectionVariables.yTarget,
+    "Z" + inspectionVariables.zTarget,
+    feedOutput.format(f)
+  );
+}
+function inspectionWriteCycleMove(feedRate, moveType) {
+  writeBlock(gFormat.format(moveType),
+    "X" + inspectionVariables.xTarget,
+    "Y" + inspectionVariables.yTarget,
+    "Z" + inspectionVariables.zTarget,
+    feedOutput.format(feedRate)
+  );
+}
+
+function inspectionProbeTriggerCheck(triggered) {
+  var condition = !inspectionVariables.alternateTriggerCheck ? triggered ? " GT " : " LT " : triggered ? "#3020 EQ 1" : "#3020 EQ 0";
+  var message = triggered ? "NO_POINT_TAKEN" : "PATH_OBSTRUCTED";
+  var inPositionTolerance = (unit == MM) ? 0.01 : 0.0004;
+  if (!inspectionVariables.alternateTriggerCheck) {
+    // if any feature coordinate system is active on the controller, apply an offset to systemVariableMeasuredX, Y and Z to account for the feature coordinate system variables
+    writeln(inspectionVariables.macroVariable1 + "=" + inspectionVariables.xTarget + "-" + (inspectionVariables.systemVariableMeasuredOffset ?
+      macroFormat.getPrefix() + "[" + inspectionVariables.systemVariableMeasuredX + "+" + macroFormat.format(inspectionVariables.systemVariableMeasuredOffset.variable) + "]" :
+      macroFormat.format(inspectionVariables.systemVariableMeasuredX))
+    );
+    writeln(inspectionVariables.macroVariable2 + "=" + inspectionVariables.yTarget + "-" + (inspectionVariables.systemVariableMeasuredOffset ?
+      macroFormat.getPrefix() + "[" + inspectionVariables.systemVariableMeasuredY + "+" + macroFormat.format(inspectionVariables.systemVariableMeasuredOffset.variable) + "]" :
+      macroFormat.format(inspectionVariables.systemVariableMeasuredY))
+    );
+    writeln(inspectionVariables.macroVariable3 + "=" + inspectionVariables.zTarget + "-" + (inspectionVariables.systemVariableMeasuredOffset ?
+      macroFormat.getPrefix() + "[" + inspectionVariables.systemVariableMeasuredZ + "+" + macroFormat.format(inspectionVariables.systemVariableMeasuredOffset.variable) + "]" + "+" + inspectionVariables.activeToolLength :
+      macroFormat.format(inspectionVariables.systemVariableMeasuredZ) + "+" + inspectionVariables.activeToolLength)
+    );
+    writeln(inspectionVariables.macroVariable4 + "=" +
+      "[" + inspectionVariables.macroVariable1 + "*" + inspectionVariables.macroVariable1 + "]" + "+" +
+      "[" + inspectionVariables.macroVariable2 + "*" + inspectionVariables.macroVariable2 + "]" + "+" +
+      "[" + inspectionVariables.macroVariable3 + "*" + inspectionVariables.macroVariable3 + "]"
+    );
+  }
+  writeBlock("IF [" +
+    conditional(!inspectionVariables.alternateTriggerCheck, inspectionVariables.macroVariable4) +
+    condition +
+    conditional(!inspectionVariables.alternateTriggerCheck, inPositionTolerance) +
+    "] GOTO" + skipNLines(2)
+  );
+  writeBlock(inspectionVariables.userAlarm, formatComment(message));
+  writeBlock(" "); // do not remove, required for GOTO functionality
+}
+
+function inspectionCorrectProbeMeasurement() {
+  writeComment("Correct Measurements");
+  var xMeasured = inspectionVariables.systemVariableMeasuredOffset ?
+    macroFormat.getPrefix() + "[" + inspectionVariables.systemVariableMeasuredX + "+" + macroFormat.format(inspectionVariables.systemVariableMeasuredOffset.variable) + "]" :
+    macroFormat.format(inspectionVariables.systemVariableMeasuredX);
+  var yMeasured = inspectionVariables.systemVariableMeasuredOffset ?
+    macroFormat.getPrefix() + "[" + inspectionVariables.systemVariableMeasuredY + "+" + macroFormat.format(inspectionVariables.systemVariableMeasuredOffset.variable) + "]" :
+    macroFormat.format(inspectionVariables.systemVariableMeasuredY);
+  var zMeasured = inspectionVariables.systemVariableMeasuredOffset ?
+    macroFormat.getPrefix() + "[" + inspectionVariables.systemVariableMeasuredZ + "+" + macroFormat.format(inspectionVariables.systemVariableMeasuredOffset.variable) + "]" :
+    macroFormat.format(inspectionVariables.systemVariableMeasuredZ);
+
+  writeln(inspectionVariables.xMeasured + "=" + xMeasured + "+" + macroFormat.format(getProperty("probeEccentricityX")));
+  writeln(inspectionVariables.yMeasured + "=" + yMeasured + "+" + macroFormat.format(getProperty("probeEccentricityY")));
+  writeln(inspectionVariables.zMeasured + "=" + zMeasured + "-" + inspectionVariables.activeToolLength + "+" + inspectionVariables.probeRadius);
+}
+
+function inspectionCalculateDeviation(cycle) {
+  // calculate the deviation and produce a warning if out of tolerance.
+  // (Measured + ((vector *(-1))*calibrated radi))
+
+  writeComment("calculate deviation");
+  // compensate for tip rad in X
+  writeln(
+    inspectionVariables.macroVariable1 + "=[" +
+    inspectionVariables.xMeasured + "+[[" +
+    ijkFormat.format(cycle.nominalI) + "*[-1]]*" +
+    inspectionVariables.probeRadius + "]]"
+  );
+  // compensate for tip rad in Y
+  writeln(
+    inspectionVariables.macroVariable2 + "=[" +
+    inspectionVariables.yMeasured + "+[[" +
+    ijkFormat.format(cycle.nominalJ) + "*[-1]]*" +
+    inspectionVariables.probeRadius + "]]"
+  );
+  // compensate for tip rad in Z
+  writeln(
+    inspectionVariables.macroVariable3 + "=[" +
+    inspectionVariables.zMeasured + "+[[" +
+    ijkFormat.format(cycle.nominalK) + "*[-1]]*" +
+    inspectionVariables.probeRadius + "]]"
+  );
+  // calculate deviation vector (measured x - nominal x)
+  writeln(
+    inspectionVariables.macroVariable4 + "=[" +
+    inspectionVariables.macroVariable1 + "-[" +
+    xyzFormat.format(cycle.nominalX) + "]]"
+  );
+  // calculate deviation vector (measured y - nominal y)
+  writeln(
+    inspectionVariables.macroVariable5 + "=[" +
+    inspectionVariables.macroVariable2 + "-[" +
+    xyzFormat.format(cycle.nominalY) + "]]"
+  );
+  // calculate deviation vector (measured z - nominal z)
+  writeln(
+    inspectionVariables.macroVariable6 + "=[" +
+    inspectionVariables.macroVariable3 + "-[" +
+    xyzFormat.format(cycle.nominalZ) + "]]"
+  );
+  // sqrt xyz.xyz this is the value of the deviation
+  writeln(
+    inspectionVariables.macroVariable7 + "=SQRT[[" +
+    inspectionVariables.macroVariable4 + "*" +
+    inspectionVariables.macroVariable4 + "]+[" +
+    inspectionVariables.macroVariable5 + "*" +
+    inspectionVariables.macroVariable5 + "]+[" +
+    inspectionVariables.macroVariable6 + "*" +
+    inspectionVariables.macroVariable6 + "]]"
+  );
+  // sign of the vector
+  writeln(
+    inspectionVariables.macroVariable1 + "=[[" +
+    ijkFormat.format(cycle.nominalI) + "*" +
+    inspectionVariables.macroVariable4 + "]+[" +
+    ijkFormat.format(cycle.nominalJ) + "*" +
+    inspectionVariables.macroVariable5 + "]+[" +
+    ijkFormat.format(cycle.nominalK) + "*" +
+    inspectionVariables.macroVariable6 + "]]"
+  );
+  // print out deviation value
+  writeBlock("IF [" + inspectionVariables.macroVariable1, "GE 0] GOTO" + skipNLines(3));
+  writeBlock(inspectionVariables.macroVariable4 + "=" + inspectionVariables.macroVariable7);
+  writeBlock("GOTO" + skipNLines(2));
+  writeBlock(inspectionVariables.macroVariable4 + "=[" + inspectionVariables.macroVariable7 + "*[-1]]");
+  writeBlock(" "); // do not remove, required for GOTO functionality
+  writeln(
+    "DPRNT[G802" + "*N" + inspectionVariables.pointNumber +
+    "*DEVIATION*" + inspectionVariables.macroVariable4 + macroRoundingFormat + "]"
+  );
+  // tolerance check
+  writeBlock(
+    "IF [" + inspectionVariables.macroVariable4 +
+    "LT" + (xyzFormat.format(getParameter("operation:inspectUpperTolerance"))) +
+    "] GOTO" + skipNLines(3)
+  );
+  writeBlock(inspectionVariables.userMessage, formatComment("INSPECTION_POINT_OVER_TOLERANCE"));
+  writeBlock("GOTO" + skipNLines(3));
+  writeBlock(
+    "IF [" + inspectionVariables.macroVariable4 +
+    "GT" + (xyzFormat.format(getParameter("operation:inspectLowerTolerance"))) +
+    "] GOTO" + skipNLines(2)
+  );
+  writeBlock(inspectionVariables.userMessage, formatComment("INSPECTION_POINT_UNDER_TOLERANCE"));
+  writeBlock(" "); // do not remove, required for GOTO functionality
+}
+
+function inspectionWriteMeasuredData(cycle) {
+  writeln("DPRNT[G801" +
+    "*N" + inspectionVariables.pointNumber +
+    "*X" + inspectionVariables.xMeasured + macroRoundingFormat +
+    "*Y" + inspectionVariables.yMeasured + macroRoundingFormat +
+    "*Z" + inspectionVariables.zMeasured + macroRoundingFormat +
+    "*R" + inspectionVariables.probeRadius + macroRoundingFormat +
+    "]"
+  );
+
+  if (cycle.outOfPositionAction == "stop-message") {
+    inspectionCalculateDeviation(cycle);
+  }
+  if (getProperty("useLiveConnection")) {
+    liveConnectionWriteData("inspectSurfacePoint");
+  }
+  inspectionVariables.pointNumber += 1;
+}
+
+function skipNLines(n) {
+  setProperty("showSequenceNumbers", "true"); // force sequence numbers to be output
+  if (inspectionVariables.saveSequenceNumbers.start > sequenceNumber) {
+    error(subst(localize(
+      "The sequence number to be output exceeds the maximum sequence number value of '%1'" + EOL +
+      "Exceeding the limit will cause the program to fail when using inspection and/or live connection due to the use of the GOTO statements." + EOL +
+      "Solutions:" + EOL +
+        "- set property '%2' to 'No'" + EOL +
+        "- set property '%3' to a lower value" + EOL +
+        "- disable property '%4'" + EOL +
+        "- modify setting 'maximumSequenceNumber' within your postprocessor to the maximum supported value" + EOL +
+        "- split the program into smaller sections."
+    ),
+    settings.maximumSequenceNumber, properties.showSequenceNumbers.title, properties.sequenceNumberIncrement.title, properties.useLiveConnection.title));
+  }
+  return (n * getProperty("sequenceNumberIncrement") + sequenceNumber);
+}
+
+function resultsOutputLine(n, s) {
+  if (n == 0) {
+    writeBlock("GOTO #1");
+  } else if (n != 20) {
+    writeln("GOTO " + (20 + s));
+  }
+  sequenceNumber = (n == 0) ? s : n + s;
+  writeBlock(" "); // do not remove, required for GOTO functionality
+}
+
+function inspectionProcessSectionStart() {
+  if (isInspectionOperation() && !getSetting("workPlaneMethod.useTiltedWorkplane", false) && isTCPSupportedByOperation(currentSection)) {
+    error(subst(localize("Inspection operations using tool orientation require the use of TWP (Tilted Work Plane) which is disabled in the postprocessor." + EOL +
+      "Please set the '%1' property to utilize TWP if supported by your postprocessor."), properties.useTiltedWorkplane.title
+    ));
+  }
+  if (getProperty("useLiveConnection") || isInspectionOperation(currentSection)) {
+    inspectionVariables.saveSequenceNumbers.start = sequenceNumber;
+    setProperty("showSequenceNumbers", "true"); // force sequence numbers to be output
+    setProperty("sequenceNumberIncrement", 1); // set sequenceNumberIncrement to 1 to prevent exceeding maximumSequenceNumber
+  }
+  if (getProperty("useLiveConnection")) {
+    liveConnectionWriteData("toolpathStart"); // write toolpath starting information for live connection
+  }
+  if (!isInspectionOperation(currentSection)) {
+    setProperty("showSequenceNumbers", inspectionVariables.saveSequenceNumbers.show); // reset showSequenceNumbers to previous state
+    return;
+  }
+  // only write header once if user selects a single results file
+  if (!isDPRNTopen || !getProperty("singleResultsFile") || (currentSection.workOffset != inspectionVariables.workpieceOffset)) {
+    inspectionCreateResultsFileHeader();
+    inspectionVariables.workpieceOffset = currentSection.workOffset;
+  }
+  // write the toolpath name as a comment
+  if (!getProperty("useLiveConnection")) {
+    writeProbingToolpathInformation();
+  }
+  inspectionWriteCADTransform();
+  inspectionWriteWorkplaneTransform();
+  inspectionVariables.inspectionSectionCount += 1;
+  if (getProperty("toolOffsetType") == "geomOnly") {
+    writeComment("Geometry Only");
+    writeBlock(
+      inspectionVariables.activeToolLength + "=" +
+      inspectionVariables.localVariablePrefix + "[" +
+      inspectionVariables.systemVariableOffsetLengthTable, "+",
+      macroFormat.format(inspectionVariables.systemVariableActiveToolNumber) +
+      "]"
+    );
+  } else {
+    writeComment("Geometry and Wear");
+    writeBlock(
+      inspectionVariables.activeToolLength + "=" +
+      inspectionVariables.localVariablePrefix + "[" +
+      inspectionVariables.systemVariableOffsetLengthTable, "+",
+      macroFormat.format(inspectionVariables.systemVariableActiveToolNumber) +
+      "] + " +
+      inspectionVariables.localVariablePrefix + "[" +
+      inspectionVariables.systemVariableOffsetWearTable, "+",
+      macroFormat.format(inspectionVariables.systemVariableActiveToolNumber) +
+      "]"
+    );
+  }
+  if (getProperty("probeCalibrationMethod") == "Renishaw") {
+    writeBlock(inspectionVariables.probeRadius + "=[[" +
+      macroFormat.format(getProperty("probeCalibratedRadius")), "+ " +
+      macroFormat.format(getProperty("probeCalibratedRadius") + 1) + "]" + "/2]"
+    );
+  } else {
+    writeBlock(inspectionVariables.probeRadius + "=" + macroFormat.format(getProperty("probeCalibratedRadius")));
+  }
+  if (getProperty("commissioningMode") && !isDPRNTopen) {
+    if (!getProperty("useLiveConnection")) {
+      writeln("DPRNT[CALIBRATED*RADIUS*" + inspectionVariables.probeRadius + macroRoundingFormat + "]");
+      writeln("DPRNT[ECCENTRICITY*X****" + macroFormat.format(getProperty("probeEccentricityX")) + macroRoundingFormat + "]");
+      writeln("DPRNT[ECCENTRICITY*Y****" + macroFormat.format(getProperty("probeEccentricityY")) + macroRoundingFormat + "]");
+    }
+    writeBlock("IF [" + inspectionVariables.probeRadius, "NE #0] GOTO" + skipNLines(2));
+    writeBlock(inspectionVariables.userAlarm, formatComment("PROBE_NOT_CALIBRATED_OR_PROPERTY_CALIBRATED_RADIUS_INCORRECT"));
+    writeBlock("IF [" + inspectionVariables.probeRadius, "NE 0] GOTO" + skipNLines(2));
+    writeBlock(inspectionVariables.userAlarm, formatComment("PROBE_NOT_CALIBRATED_OR_PROPERTY_CALIBRATED_RADIUS_INCORRECT"));
+    writeBlock("IF [" + inspectionVariables.probeRadius, "LT", xyzFormat.format(tool.diameter / 2) + "] GOTO" + skipNLines(2));
+    writeBlock(inspectionVariables.userAlarm, formatComment("PROBE_NOT_CALIBRATED_OR_PROPERTY_CALIBRATED_RADIUS_INCORRECT"));
+    var maxEccentricity = (unit == MM) ? 0.2 : 0.0079;
+    writeBlock("IF [ABS[" + macroFormat.format(getProperty("probeEccentricityX")) + "] LT", maxEccentricity + "] GOTO" + skipNLines(2));
+    writeBlock(inspectionVariables.userAlarm, formatComment("PROBE_NOT_CALIBRATED_OR_PROPERTY_ECCENTRICITY_X_INCORRECT"));
+    writeBlock("IF [ABS[" + macroFormat.format(getProperty("probeEccentricityY")) + "] LT", maxEccentricity + "] GOTO" + skipNLines(2));
+    writeBlock(inspectionVariables.userAlarm, formatComment("PROBE_NOT_CALIBRATED_OR_PROPERTY_ECCENTRICITY_Y_INCORRECT"));
+    writeBlock("IF [" + macroFormat.format(getProperty("probeEccentricityX")), "NE #0] GOTO" + skipNLines(2));
+    writeBlock(inspectionVariables.userAlarm, formatComment("PROBE_NOT_CALIBRATED_OR_PROPERTY_ECCENTRICITY_X_INCORRECT"));
+    writeBlock("IF [" + macroFormat.format(getProperty("probeEccentricityY")), "NE #0] GOTO" + skipNLines(2));
+    writeBlock(inspectionVariables.userAlarm, formatComment("PROBE_NOT_CALIBRATED_OR_PROPERTY_ECCENTRICITY_Y_INCORRECT"));
+  }
+  isDPRNTopen = true;
+  if (inspectionVariables.toolLengthParameterCheck) {
+    writeBlock(inspectionVariables.macroVariable1 + "=PRM[6014,4]");
+    writeBlock("IF [" + inspectionVariables.macroVariable1, "EQ 0] GOTO" + skipNLines(2));
+    writeBlock(inspectionVariables.activeToolLength, "= 0");
+  }
+  if (inspectionVariables.systemVariableMeasuredOffset) {
+    var offsetVariable = macroFormat.format(inspectionVariables.systemVariableMeasuredOffset.variable); // the offset variable number
+    var offsetValue = inspectionVariables.systemVariableMeasuredOffset.value; // the offset value to be used for systemVariableMeasuredX, Y and Z
+    writeBlock(offsetVariable + "=" + 0);
+    writeBlock("IF[#4016EQ69] GOTO" + skipNLines(2)); // check if G68 or G68.2 is active
+    writeBlock(offsetVariable + "=" + offsetValue); // assign the offset value to the offset variable
+    if (getProperty("useG54x4")) {
+      writeBlock("IF[#5800EQ0] GOTO" + skipNLines(2)); // check if G54.4 is active
+      writeBlock(offsetVariable + "=" + offsetValue); // assign the offset value to the offset variable
+    }
+  }
+  writeBlock(" "); // do not remove, required for GOTO functionality
+}
+
+function inspectionProcessSectionEnd() {
+  // close inspection results file if the NC has inspection toolpaths
+  if (inspectionVariables.hasInspectionSections && (getCurrentSectionId() == -1)) {
+    if (getProperty("commissioningMode") && inspectionVariables.printParameterCheck) {
+      writeBlock(inspectionVariables.macroVariable1 + "=PRM[6019,3]");
+      writeBlock("IF [" + inspectionVariables.macroVariable1, "NE 0] GOTO" + skipNLines(2));
+      writeBlock(inspectionVariables.userMessage, formatComment("MRESULTS_FILENAME_IS_PRNTXXXX.DAT"));
+      writeBlock("IF [" + inspectionVariables.macroVariable1, "NE 1] GOTO" + skipNLines(2));
+      writeBlock(inspectionVariables.userMessage, formatComment("MRESULTS_FILENAME_IS_MCR_PRNT.TXT"));
+      var skipValue = skipNLines(2);
+      writeBlock("#1 = [PRM[20] +", skipValue + "]");
+      resultsOutputLine(0, skipValue);
+      writeln(inspectionVariables.userMessage + formatComment("RESULTS_FILE_SEND_TO_SERIAL"));
+      resultsOutputLine(4, skipValue);
+      writeln(inspectionVariables.userMessage + formatComment("RESULTS_FILE_SEND_TO_MEMORY_CARD"));
+      resultsOutputLine(5, skipValue);
+      writeln(inspectionVariables.userMessage + formatComment("RESULTS_FILE_SEND_TO_DATA_SERVER"));
+      resultsOutputLine(9, skipValue);
+      writeln(inspectionVariables.userMessage + formatComment("RESULTS_FILE_SEND_TO_FTP"));
+      resultsOutputLine(15, skipValue);
+      writeln(inspectionVariables.userMessage + formatComment("RESULTS_FILE_SEND_TO_ETHERNET"));
+      resultsOutputLine(17, skipValue);
+      writeln(inspectionVariables.userMessage + formatComment("RESULTS_FILE_SEND_TO_USB"));
+      resultsOutputLine(20, skipValue);
+      onCommand(COMMAND_STOP);
+    }
+  }
+  // live connection toolpath end
+  if (getProperty("useLiveConnection")) {
+    if (getCurrentSectionId() != -1) {
+      liveConnectionWriteData("toolpathEnd");
+      onDwell(1);
+      if (isInspectionOperation()) {
+        liveConnectionWriteData("inspectSurfaceAlarm");
+      }
+    } else {
+      writeComment("Program Finish");
+      // if using live connection set results active to '2' to indicate program end
+      writeBlock(inspectionVariables.liveConnectionStatus, "= 2");
+    }
+  }
+  setProperty("showSequenceNumbers", inspectionVariables.saveSequenceNumbers.show); // reset showSequenceNumbers to previous state
+  if (!getProperty("useLiveConnection")) {
+    setProperty("sequenceNumberIncrement", inspectionVariables.saveSequenceNumbers.increment); // reset sequenceNumberIncrement to previous state
+  }
+}
+// <<<<< INCLUDED FROM inspection/common/fanuc base inspection.cps
+

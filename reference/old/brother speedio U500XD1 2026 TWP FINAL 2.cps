@@ -10,8 +10,8 @@
   FORKID {C09133CD-6F13-4DFC-9EB8-41260FBB5B08}
 */
 
-description = "Brother Speedio U500XD1 2026 TWP FINAL R1001";
-var postRevTag = "R1001"; // TWP FORK: post revision tag - appended to the program name line to prove which post copy generated the file
+description = "Brother Speedio U500XD1 2026 TWP FINAL R0925";
+var postRevTag = "R0925"; // TWP FORK: post revision tag - appended to the program name line to prove which post copy generated the file
 vendor = "Brother";
 vendorUrl = "http://www.brother.com";
 legal = "Copyright (C) 2012-2026 by Autodesk, Inc.";
@@ -77,46 +77,6 @@ properties = {
     group      : "formats",
     type       : "integer",
     value      : 5,
-    scope      : "post"
-  },
-  partAccessOnStop: {
-    title      : "Part access: move table on M00",
-    description: "TWP FORK: at a Manual NC Stop (M00) between operations - coolant off, spindle stop, retract Z, cancel G43/G43.4 + G68.2 + smoothing, then G53 rapid to the part-access X/Y below before the M00. The next operation re-establishes everything.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
-    scope      : "post"
-  },
-  partAccessOnProgramEnd: {
-    title      : "Part access: move table at program end",
-    description: "TWP FORK: at program end, G53 rapid to the part-access X/Y below instead of machine X0 Y0.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
-    scope      : "post"
-  },
-  partAccessX: {
-    title      : "Part access X (machine coord)",
-    description: "TWP FORK: G53 MACHINE coordinate X for the table part-access position (front/center of the door), in program units. Jog there on the pendant and read the MACHINE position. 0 = machine home.",
-    group      : "preferences",
-    type       : "number",
-    value      : -11.75,
-    scope      : "post"
-  },
-  partAccessY: {
-    title      : "Part access Y (machine coord)",
-    description: "TWP FORK: G53 MACHINE coordinate Y for the table part-access position (front/center of the door), in program units. 0 = machine home.",
-    group      : "preferences",
-    type       : "number",
-    value      : 0,
-    scope      : "post"
-  },
-  partAccessLevelTable: {
-    title      : "Part access: level table (A0 C0) on M00",
-    description: "TWP FORK: rotate to A0 C0 at Z home BEFORE the X/Y move at an M00 part-access stop (same order as the O8000 break-check macro: G28 Z, G28 A, then XY). Program end always levels first.",
-    group      : "preferences",
-    type       : "boolean",
-    value      : true,
     scope      : "post"
   },
   optionalStop: {
@@ -661,51 +621,6 @@ function suspendSmoothingForRewind() {
   smoothing.rewindSuspended = true; // smoothing state vars are left as-is so the restore is exact
 }
 
-// TWP FORK: part access position (2026-09-25). Same safe-state sequence as the machine-proven
-// break-control block (coolant off, G28/G100 retract, G49 before G69, smoothing off, M05), then a
-// G53 rapid to the operator-set X/Y. State flags are updated by the called functions, so the next
-// operation re-outputs G68.2/G53.1, G43/G43.4 + H, spindle and coolant as normal.
-function moveToPartAccess(atProgramEnd) {
-  var wasTCP = state.tcpIsActive;
-  onCommand(COMMAND_COOLANT_OFF);
-  writeRetract(Z);
-  disableLengthCompensation(true);
-  cancelWorkPlane(true);
-  var modeBWasOn = smoothing.isActive && smoothing.activeMode == "tcp5axis"; // setSmoothing(false) writes M289 for this case
-  var needModeBOff = wasTCP || smoothing.tcpInLinkMove || smoothing.commandMode == "tcp5axis";
-  smoothing.force = true;
-  setSmoothing(false);
-  if (needModeBOff && !modeBWasOn) {
-    writeSmoothingBlock([mFormat.format(289)], getSmoothingDescription("tcp5axis", false, -1)); // mode B off before any A/C move
-  }
-  if (!atProgramEnd) {
-    onCommand(COMMAND_STOP_SPINDLE);
-  }
-  // level the table at Z home BEFORE moving X/Y (O8000 order: G28 Z, G28 A, then XY)
-  if ((atProgramEnd || getProperty("partAccessLevelTable")) && machineConfiguration.isMultiAxisConfiguration()) {
-    positionABC(new Vector(0, 0, 0), true);
-  }
-  writeComment("PART ACCESS POSITION");
-  forceModals(gMotionModal);
-  writeBlock(gAbsIncModal.format(90), gFormat.format(53), gMotionModal.format(0),
-    "X" + xyzFormat.format(getProperty("partAccessX")), "Y" + xyzFormat.format(getProperty("partAccessY")));
-  forceXYZ(); // next positioning must re-output X/Y
-  if (!atProgramEnd) {
-    forceABC(); // next operation must re-index A/C
-  }
-}
-
-// TWP FORK: rewind spindle/coolant restart (2026-09-25, O1521 - spindle stayed off after the rewind).
-// Under TCP the rewind retract is G100 T__ (writeRetract), which stops the spindle; writeRetract flags
-// forceSpindleSpeed/forceCoolant for a same-tool restart, but only onSection consumed them - the rewind
-// path never did. Restart here: after the rotary index, tool still at Z home, before G68.2/G43.4 re-entry.
-function restartSpindleAfterRewind() {
-  forceSpindleSpeed = true;
-  forceCoolant = true;
-  startSpindle(tool, false);
-  setCoolant(tool.coolant);
-}
-
 function restoreSmoothingAfterRewind() {
   if (!smoothing.rewindSuspended) {
     return;
@@ -725,13 +640,7 @@ function printProbeResults() {
   return ((currentSection.getParameter("printResults", 0) == 1) && (getProperty("probingType") == "Renishaw"));
 }
 
-// TWP FORK: true from onSection until the end of onSectionEnd. Manual NC Stops arrive between
-// operations (inSection false); M00s the post itself writes mid-operation (manual tool change,
-// inspection commissioning mode) stay in place and do NOT move the table.
-var inSection = false;
-
 function onSection() {
-  inSection = true;
   var forceSectionRestart = optionalSection && !currentSection.isOptional();
   optionalSection = currentSection.isOptional();
   var toolChange = isToolChangeNeeded("number");
@@ -1861,9 +1770,6 @@ function onCommand(command) {
     setCoolant(tool.coolant);
     return;
   case COMMAND_STOP:
-    if (getProperty("partAccessOnStop") && !inSection) {
-      moveToPartAccess(false); // TWP FORK: Manual NC Stop between operations - bring the table to the door
-    }
     writeBlock(mFormat.format(0));
     forceSpindleSpeed = true;
     forceCoolant = true;
@@ -1894,11 +1800,6 @@ function onCommand(command) {
     
     if (isSameToolNonTCPtoTCP || isToolChangeTCPEntry) {
       writeBlock(gFormat.format(100), "T" + toolFormat.format(tool.number));
-      if (isToolChangeTCPEntry) {
-        // TWP FORK: bare G100 bypasses writeToolBlock, so machine simulation never saw the tool change
-        // ("Tool-change instruction missing" / "Connection without a tool"). Simulation-only - NC output unchanged.
-        machineSimulation({mode:TOOLCHANGE});
-      }
     } else {
       writeToolBlock(gFormat.format(100),
         "T" + toolFormat.format(tool.number),
@@ -2064,7 +1965,6 @@ function onSectionEnd() {
   }
   forceAny();
   setAllowedCircularPlanes(currentSection.getId());
-  inSection = false; // TWP FORK: see inSection
 }
 
 function setAllowedCircularPlanes(sectionId) {
@@ -2156,9 +2056,7 @@ function onClose() {
 
   var firstToolNumber = getSection(0).getTool().number;
   writeBlock(gFormat.format(100), "T" + toolFormat.format(firstToolNumber));
-  if (getProperty("partAccessOnProgramEnd")) {
-    moveToPartAccess(true); // TWP FORK: table to the door instead of machine X0 Y0
-  } else if (getSetting("retract.homeXY.onProgramEnd", false)) {
+  if (getSetting("retract.homeXY.onProgramEnd", false)) {
     writeRetract(settings.retract.homeXY.onProgramEnd);
   }
   setSmoothing(false);
@@ -4070,7 +3968,6 @@ function onRotateAxes(_x, _y, _z, _a, _b, _c) {
 
 /** Return from safe position after indexing rotaries. */
 function onReturnFromSafeRetractPosition(_x, _y, _z) {
-  restartSpindleAfterRewind(); // TWP FORK: the rewind retract G100 T__ stops the spindle - restart at Z home before re-entry
   if (!machineConfiguration.isHeadConfiguration()) {
     writeInitialPositioning(new Vector(_x, _y, _z), true);
     restoreSmoothingAfterRewind(); // TWP FORK: after G43.4 - same placement as section-entry TCP smoothing
